@@ -1,0 +1,6 @@
+{
+  "name": "Repair Center Portal",
+  "description": "A service portal to manage repair tickets, upload photos, and save data to a local database.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
