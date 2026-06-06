@@ -1,1 +1,89 @@
 @import "tailwindcss";
+
+/* 
+  Global Dark Mode Overrides for light-themed standard utility classes used in the project
+*/
+.dark body {
+  background-color: #000000;
+  color: #3b82f6;
+}
+
+.dark [class*="bg-white"] {
+  background-color: #000000 !important;
+  border-color: #1e3a8a !important;
+  color: #60a5fa;
+}
+
+.dark [class*="bg-slate-800"], .dark [class*="bg-slate-900"], .dark [class*="bg-slate-100"], .dark [class*="bg-slate-200"], .dark [class*="bg-slate-50"] {
+  background-color: #000000 !important;
+  color: #60a5fa;
+}
+
+.dark [class*="bg-[#F8F9FA]"] {
+  background-color: #000000 !important;
+}
+
+.dark [class*="bg-[#F9FAFB]"] {
+  background-color: #000000 !important;
+}
+
+.dark [class*="bg-[#F5F6FA]"] {
+  background-color: #000000 !important;
+}
+
+.dark [class*="bg-indigo-600"] {
+  background-color: #1d4ed8 !important;
+}
+
+.dark [class*="text-slate-800"], .dark [class*="text-slate-900"] {
+  color: #93c5fd !important;
+}
+
+.dark [class*="text-slate-700"], .dark [class*="text-slate-600"] {
+  color: #60a5fa !important;
+}
+
+.dark [class*="text-slate-500"] {
+  color: #3b82f6 !important;
+}
+
+.dark [class*="text-slate-400"], .dark [class*="text-slate-300"], .dark [class*="text-slate-200"] {
+  color: #2563eb !important;
+}
+
+.dark [class*="border-slate-100"], .dark [class*="border-slate-200"], .dark [class*="border-slate-300"], .dark [class*="border-emerald-"], .dark [class*="border-indigo-"] {
+  border-color: #1e3a8a !important;
+}
+
+.dark input, .dark select, .dark textarea {
+  background-color: #000000 !important;
+  color: #93c5fd !important;
+  border-color: #1e3a8a !important;
+}
+
+/* Fix some specific colors */
+.dark [class*="text-indigo-"] {
+  color: #60a5fa !important;
+}
+
+.dark [class*="text-emerald-"], .dark [class*="text-red-"], .dark [class*="text-amber-"] {
+  color: #3b82f6 !important;
+}
+
+.dark [class*="bg-[#EEF2FF]"], .dark [class*="bg-indigo-100"], .dark [class*="bg-indigo-50"] {
+  background-color: #1e3a8a !important; 
+  color: #93c5fd !important;
+}
+
+.dark [class*="bg-emerald-"], .dark [class*="bg-red-"], .dark [class*="bg-amber-"] {
+  background-color: #1e3a8a !important;
+  color: #60a5fa !important;
+}
+
+.dark [class*="hover:bg-slate-"]:hover {
+  background-color: #1e3a8a !important;
+}
+
+.dark [class*="hover:bg-emerald-"]:hover, .dark [class*="hover:bg-red-"]:hover, .dark [class*="hover:bg-indigo-"]:hover {
+  background-color: #1e3a8a !important;
+}

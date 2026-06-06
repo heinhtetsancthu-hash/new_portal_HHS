@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { PlusCircle, List, Database, Settings, LogOut, Menu, X } from 'lucide-react';
+import { PlusCircle, List, Database, Settings, ArrowLeft, Menu, X } from 'lucide-react';
 import { getTickets } from '../db';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeView: string;
   setActiveView: (view: string) => void;
-  onSignOut: () => void;
+  onBack: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveView, onSignOut }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveView, onBack }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
@@ -19,23 +19,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveV
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const handleSignOutClick = async () => {
-    try {
-      const tickets = await getTickets();
-      const backupData = JSON.stringify(tickets, null, 2);
-      const blob = new Blob([backupData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `HeinHtetSan_Service_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Auto backup failed', e);
-    }
-    onSignOut();
+  const handleBackClick = () => {
+    onBack();
   };
 
   return (
@@ -75,11 +60,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveV
 
         <div className="p-4 border-t border-slate-100">
           <button 
-            onClick={handleSignOutClick}
-            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors"
+            onClick={handleBackClick}
+            className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl text-sm font-medium transition-colors"
           >
-            <LogOut size={18} />
-            Sign Out
+            <ArrowLeft size={18} />
+            Back to Home
           </button>
         </div>
       </aside>

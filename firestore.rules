@@ -1,0 +1,175 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // We don't write user docs right now
+
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /tickets/{ticketId} {
+        function isValidTicket(data) {
+          return data.keys().hasAll(['id', 'customerName', 'phoneNumber', 'deviceBrand', 'deviceModel', 'imei', 'errorType', 'estimatedCost', 'screenLock', 'notes', 'createdAt']) &&
+                 data.id is string && data.id.size() <= 128 &&
+                 data.customerName is string && data.customerName.size() <= 200 &&
+                 data.phoneNumber is string && data.phoneNumber.size() <= 50 &&
+                 data.deviceBrand is string && data.deviceBrand.size() <= 100 &&
+                 data.deviceModel is string && data.deviceModel.size() <= 100 &&
+                 data.imei is string && data.imei.size() <= 100 &&
+                 data.errorType is string && data.errorType.size() <= 100 &&
+                 data.estimatedCost is string && data.estimatedCost.size() <= 100 &&
+                 data.screenLock is string && data.screenLock.size() <= 50 &&
+                 data.notes is string && data.notes.size() <= 5000 &&
+                 data.createdAt is number &&
+                 (
+                   !('ticketId' in data) || (data.ticketId is string && data.ticketId.size() <= 128)
+                 ) &&
+                 (
+                   !('screenLockValue' in data) || (data.screenLockValue is string && data.screenLockValue.size() <= 100)
+                 ) &&
+                 (
+                   !('accessories' in data) || (data.accessories is list && data.accessories.size() <= 20)
+                 ) &&
+                 (
+                   !('photos' in data) || (data.photos is list && data.photos.size() <= 20)
+                 ) &&
+                 (
+                   !('status' in data) || (data.status is string && data.status.size() <= 50)
+                 ) &&
+                 (
+                   !('returnedAt' in data) || data.returnedAt is number
+                 );
+        }
+
+        allow read, list: if isOwner(userId);
+        
+        allow create: if isOwner(userId) && isValidId(ticketId) && isValidTicket(request.resource.data) && request.resource.data.id == ticketId;
+        
+        allow update: if isOwner(userId) && isValidId(ticketId) && isValidTicket(request.resource.data) && request.resource.data.id == ticketId;
+
+        allow delete: if isOwner(userId) && isValidId(ticketId);
+      }
+
+      match /transactions/{transactionId} {
+        function isValidTransaction(data) {
+          return data.keys().hasAll(['id', 'type', 'amount', 'category', 'description', 'createdAt']) &&
+                 data.id is string && data.id.size() <= 128 &&
+                 data.type is string && (data.type == 'income' || data.type == 'expense') &&
+                 data.amount is number &&
+                 data.category is string && data.category.size() <= 100 &&
+                 data.description is string && data.description.size() <= 500 &&
+                 data.createdAt is number;
+        }
+
+        allow read, list: if isOwner(userId);
+        
+        allow create: if isOwner(userId) && isValidId(transactionId) && isValidTransaction(request.resource.data) && request.resource.data.id == transactionId;
+        
+        allow update: if isOwner(userId) && isValidId(transactionId) && isValidTransaction(request.resource.data) && request.resource.data.id == transactionId;
+
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+      match /stocks/{stockId} {
+        function isValidStock(data) {
+          return data.keys().hasAll(['id', 'brand', 'model', 'ramRom', 'imei', 'color', 'price', 'createdAt']) &&
+                 data.id is string && data.id.size() <= 128 &&
+                 data.brand is string && data.brand.size() <= 100 &&
+                 data.model is string && data.model.size() <= 100 &&
+                 data.ramRom is string && data.ramRom.size() <= 100 &&
+                 data.imei is string && data.imei.size() <= 100 &&
+                 data.color is string && data.color.size() <= 100 &&
+                 data.price is number &&
+                 data.createdAt is number;
+        }
+
+        allow read, list: if isOwner(userId);
+        
+        allow create: if isOwner(userId) && isValidId(stockId) && isValidStock(request.resource.data) && request.resource.data.id == stockId;
+        
+        allow update: if isOwner(userId) && isValidId(stockId) && isValidStock(request.resource.data) && request.resource.data.id == stockId;
+
+        allow delete: if isOwner(userId) && isValidId(stockId);
+      }
+      match /sales/{saleId} {
+        function isValidSale(data) {
+          return data.keys().hasAll(['id', 'customerName', 'phoneNumber', 'address', 'stockId', 'brand', 'model', 'ramRom', 'imei', 'color', 'price', 'soldAt']) &&
+                 data.id is string && data.id.size() <= 128 &&
+                 data.customerName is string && data.customerName.size() <= 100 &&
+                 data.phoneNumber is string && data.phoneNumber.size() <= 100 &&
+                 data.address is string && data.address.size() <= 500 &&
+                 data.stockId is string && data.stockId.size() <= 128 &&
+                 data.brand is string && data.brand.size() <= 100 &&
+                 data.model is string && data.model.size() <= 100 &&
+                 data.ramRom is string && data.ramRom.size() <= 100 &&
+                 data.imei is string && data.imei.size() <= 100 &&
+                 data.color is string && data.color.size() <= 100 &&
+                 data.price is number &&
+                 data.soldAt is number;
+        }
+
+        allow read, list: if isOwner(userId);
+        
+        allow create: if isOwner(userId) && isValidId(saleId) && isValidSale(request.resource.data) && request.resource.data.id == saleId;
+        
+        allow update: if isOwner(userId) && isValidId(saleId) && isValidSale(request.resource.data) && request.resource.data.id == saleId;
+
+        allow delete: if isOwner(userId) && isValidId(saleId);
+      }
+      match /installmentSales/{saleId} {
+        function isValidInstallmentSale(data) {
+          return data.keys().hasAll(['id', 'customerName', 'phoneNumber', 'address', 'stockId', 'brand', 'model', 'ramRom', 'imei', 'color', 'price', 'interest', 'docFees', 'downPayment', 'months', 'monthlyPayments', 'grandTotal', 'remainBalance', 'soldAt']) &&
+                 data.id is string && data.id.size() <= 128 &&
+                 data.customerName is string && data.customerName.size() <= 100 &&
+                 data.phoneNumber is string && data.phoneNumber.size() <= 100 &&
+                 data.address is string && data.address.size() <= 500 &&
+                 data.stockId is string && data.stockId.size() <= 128 &&
+                 data.brand is string && data.brand.size() <= 100 &&
+                 data.model is string && data.model.size() <= 100 &&
+                 data.ramRom is string && data.ramRom.size() <= 100 &&
+                 data.imei is string && data.imei.size() <= 100 &&
+                 data.color is string && data.color.size() <= 100 &&
+                 data.price is number &&
+                 data.interest is number &&
+                 data.docFees is number &&
+                 data.downPayment is number &&
+                 data.months is number &&
+                 data.monthlyPayments is list &&
+                 data.grandTotal is number &&
+                 data.remainBalance is number &&
+                 data.soldAt is number;
+        }
+
+        allow read, list: if isOwner(userId);
+        
+        allow create: if isOwner(userId) && isValidId(saleId) && isValidInstallmentSale(request.resource.data) && request.resource.data.id == saleId;
+        
+        allow update: if isOwner(userId) && isValidId(saleId) && isValidInstallmentSale(request.resource.data) && request.resource.data.id == saleId;
+
+        allow delete: if isOwner(userId) && isValidId(saleId);
+      }
+    }
+  }
+}

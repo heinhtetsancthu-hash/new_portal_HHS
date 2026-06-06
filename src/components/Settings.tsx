@@ -1,37 +1,109 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Check, Save } from 'lucide-react';
+import { getSettings, saveSettings, subscribeToSettings } from '../db';
 
 export const DEFAULT_ERROR_TYPES = [
-  "Broken Screen",
-  "Battery Replacement",
-  "Charging Port Issue",
-  "Water Damage",
-  "Software Issue",
-  "Other"
+  "No Power",
+  "USB Port",
+  "FRP",
+  "Global Change",
+  "Battery Replace",
+  "Battery Error",
+  "Glass Replacement",
+  "Apple ID",
+  "Speaker Error",
+  "Earpiece Error",
+  "Power Key",
+  "Screen Lock Remove",
+  "playstore",
+  "Mic Error",
+  "Glue",
+  "Computer Repair",
+  "Backglass Replace"
 ];
 
-export const getStoredErrorTypes = (): string[] => {
-  const stored = localStorage.getItem('repair_error_types');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      return DEFAULT_ERROR_TYPES;
-    }
+export const getStoredErrorTypes = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('repair_error_types_v2');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get error types', e);
   }
   return DEFAULT_ERROR_TYPES;
 };
 
-export const setStoredErrorTypes = (types: string[]) => {
-  localStorage.setItem('repair_error_types', JSON.stringify(types));
+export const subscribeStoredErrorTypes = (callback: (types: string[]) => void): (() => void) => {
+  return subscribeToSettings('repair_error_types_v2', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_ERROR_TYPES);
+    }
+  });
 };
 
-export const getStoredTerms = (): string => {
-  return localStorage.getItem('repair_terms_condition') || "1. We are not responsible for any data loss during the repair. Please backup your data.\n2. Devices left over 60 days after repair completion will be disposed of.\n3. Water damage repairs carry no warranty.";
+export const setStoredErrorTypes = async (types: string[]) => {
+  try {
+    await saveSettings('repair_error_types_v2', types);
+  } catch (e) {
+    console.error('Failed to save error types', e);
+  }
 };
 
-export const setStoredTerms = (terms: string) => {
-  localStorage.setItem('repair_terms_condition', terms);
+export const getStoredTerms = async (): Promise<string> => {
+  try {
+    const stored = await getSettings('repair_terms_condition');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get terms', e);
+  }
+  return "1. We are not responsible for any data loss during the repair. Please backup your data.\n2. Devices left over 60 days after repair completion will be disposed of.\n3. Water damage repairs carry no warranty.";
+};
+
+export const subscribeStoredTerms = (callback: (terms: string) => void): (() => void) => {
+  return subscribeToSettings('repair_terms_condition', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback("1. We are not responsible for any data loss during the repair. Please backup your data.\n2. Devices left over 60 days after repair completion will be disposed of.\n3. Water damage repairs carry no warranty.");
+    }
+  });
+};
+
+export const setStoredTerms = async (terms: string) => {
+  try {
+    await saveSettings('repair_terms_condition', terms);
+  } catch (e) {
+    console.error('Failed to save terms', e);
+  }
+};
+
+export const getStoredSaleTerms = async (): Promise<string> => {
+  try {
+    const stored = await getSettings('sale_terms_condition');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get sale terms', e);
+  }
+  return "ဝယ်ယူအားပေးမှု့ကို ကျေဇူးအထူးတင်ရှိပါသည်။\nဝယ်ပြီးပစ္စည်း ပြန်မလဲပေးပါ ။";
+};
+
+export const subscribeStoredSaleTerms = (callback: (terms: string) => void): (() => void) => {
+  return subscribeToSettings('sale_terms_condition', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback("ဝယ်ယူအားပေးမှု့ကို ကျေဇူးအထူးတင်ရှိပါသည်။\nဝယ်ပြီးပစ္စည်း ပြန်မလဲပေးပါ ။");
+    }
+  });
+};
+
+export const setStoredSaleTerms = async (terms: string) => {
+  try {
+    await saveSettings('sale_terms_condition', terms);
+  } catch (e) {
+    console.error('Failed to save sale terms', e);
+  }
 };
 
 export const Settings: React.FC = () => {
@@ -42,10 +114,18 @@ export const Settings: React.FC = () => {
 
   const [terms, setTerms] = useState('');
   const [termsSaved, setTermsSaved] = useState(false);
+  const [saleTerms, setSaleTerms] = useState('');
+  const [saleTermsSaved, setSaleTermsSaved] = useState(false);
 
   useEffect(() => {
-    setErrorTypes(getStoredErrorTypes());
-    setTerms(getStoredTerms());
+    const unsubErrors = subscribeStoredErrorTypes(setErrorTypes);
+    const unsubTerms = subscribeStoredTerms(setTerms);
+    const unsubSaleTerms = subscribeStoredSaleTerms(setSaleTerms);
+    return () => {
+      unsubErrors();
+      unsubTerms();
+      unsubSaleTerms();
+    };
   }, []);
 
   const handleAdd = () => {
@@ -84,14 +164,31 @@ export const Settings: React.FC = () => {
     setTermsSaved(true);
     setTimeout(() => setTermsSaved(false), 3000);
   };
+  
+  const handleSaveSaleTerms = () => {
+    setStoredSaleTerms(saleTerms);
+    setSaleTermsSaved(true);
+    setTimeout(() => setSaleTermsSaved(false), 3000);
+  };
 
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Error Types Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800">Error Types Configuration</h3>
-          <p className="text-sm text-slate-500 mt-1">Manage the error types available in the new ticket form.</p>
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">Error Types Configuration</h3>
+            <p className="text-sm text-slate-500 mt-1">Manage the error types available in the new ticket form.</p>
+          </div>
+          <button
+            onClick={() => {
+              setErrorTypes(DEFAULT_ERROR_TYPES);
+              setStoredErrorTypes(DEFAULT_ERROR_TYPES);
+            }}
+            className="text-sm px-3 py-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+          >
+            Reset to Defaults
+          </button>
         </div>
         <div className="p-6">
           <div className="flex gap-2 mb-6">
@@ -159,7 +256,7 @@ export const Settings: React.FC = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-[#F8F9FA]">
           <div>
-            <h3 className="text-lg font-semibold text-slate-800">Terms and Conditions</h3>
+            <h3 className="text-lg font-semibold text-slate-800">Repair Terms and Conditions</h3>
             <p className="text-sm text-slate-500 mt-1">Configure your local repair shop terms.</p>
           </div>
           <button
@@ -181,6 +278,37 @@ export const Settings: React.FC = () => {
           {termsSaved && (
             <div className="mt-4 p-3 bg-emerald-50 text-emerald-600 text-sm font-medium rounded-lg flex items-center gap-2 border border-emerald-100">
               <Check size={16} /> Terms successfully saved to local settings.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sale Terms & Conditions Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-[#F8F9FA]">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">Sale Terms and Conditions</h3>
+            <p className="text-sm text-slate-500 mt-1">Configure your sale receipt terms.</p>
+          </div>
+          <button
+            onClick={handleSaveSaleTerms}
+            className="bg-[#5C67ED] hover:bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm text-sm"
+          >
+            <Save size={16} />
+            {saleTermsSaved ? 'Saved!' : 'Save'}
+          </button>
+        </div>
+        <div className="p-6">
+          <textarea
+            value={saleTerms}
+            onChange={(e) => setSaleTerms(e.target.value)}
+            rows={6}
+            placeholder="Enter sale policies, warranties, or terms..."
+            className="w-full px-4 py-3 bg-[#F9FAFB] border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors resize-y"
+          />
+          {saleTermsSaved && (
+            <div className="mt-4 p-3 bg-emerald-50 text-emerald-600 text-sm font-medium rounded-lg flex items-center gap-2 border border-emerald-100">
+              <Check size={16} /> Sale terms successfully saved to local settings.
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Save, ImagePlus, X, Lock, AlertCircle } from 'lucide-react';
 import { Ticket } from '../types';
 import { saveTicket } from '../db';
-import { getStoredErrorTypes } from './Settings';
+import { getStoredErrorTypes, subscribeStoredErrorTypes } from './Settings';
 
 export const NewTicket: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,7 +24,8 @@ export const NewTicket: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setErrorTypes(getStoredErrorTypes());
+    const unsub = subscribeStoredErrorTypes(setErrorTypes);
+    return () => unsub();
   }, []);
 
   const [accessories, setAccessories] = useState({
@@ -50,14 +51,14 @@ export const NewTicket: React.FC = () => {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      Array.from(e.target.files).forEach(file => {
+      Array.from(e.target.files).forEach((file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === 'string') {
             setPhotos(prev => [...prev, reader.result as string]);
           }
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file as File);
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
     }

@@ -1,55 +1,161 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, DollarSign, Plus, ArrowUpRight, ArrowDownRight, Trash2, Calendar, Settings, LogOut, Menu, X, Check, Edit2, Upload, Download, Filter, Search, Eye } from 'lucide-react';
-import { saveTransaction, getTransactions, deleteTransaction, updateTransaction } from '../db';
+import { ArrowLeft, DollarSign, Plus, ArrowUpRight, ArrowDownRight, Trash2, Calendar, Settings, LogOut, Menu, X, Check, Edit2, Upload, Download, Filter, Search, Eye, Package } from 'lucide-react';
+import { saveTransaction, getTransactions, deleteTransaction, updateTransaction, getSettings, saveSettings, subscribeToSettings } from '../db';
 import { Transaction } from '../types';
 
 interface FinanceProps {
   onBack: () => void;
 }
 
-const DEFAULT_INCOME_CATS = ['Repair Service', 'Accessory Sales', 'Device Sales', 'Other'];
-const DEFAULT_EXPENSE_CATS = ['Spare Parts', 'Shop Rent', 'Utilities', 'Salary', 'Other'];
+const DEFAULT_INCOME_CATS = [
+  'Sales',
+  'Service',
+  'Adjustment Amount',
+  'AA',
+  'BB',
+  'Daily Accessories',
+  'Installement',
+  'handset sale'
+];
+const DEFAULT_EXPENSE_CATS = [
+  'Rent',
+  'Utilities',
+  'Salary',
+  'Inventory',
+  'ဈေးဖိုး',
+  'ဝန်ထမ်းလစာ',
+  'မနက်စာ',
+  'မီတာခ',
+  'လျှပ်စစ်ပစ္စည်းဝယ်',
+  'တန်ဆာခ',
+  'ခလေးမုန့်ဖိုး',
+  'အလှပြင်ပစ္စည်းဝယ်',
+  'ဆေးခန်း_ဆေးဝယ်',
+  'အခွန်',
+  'အလှူခံ',
+  'လူမှု့ရေး',
+  'ရေဘူး',
+  'စာရေးကိရိယာ',
+  'ဆီဖိုး',
+  'အချိုရည်',
+  'ကျူရှင်လခ',
+  'ဝေမာလွင်',
+  'KO_Pay',
+  'KPay',
+  'WIFI',
+  'ADJUSTMENT_AMOUNT'
+];
 
-export const getStoredIncomeCats = (): string[] => {
-  const stored = localStorage.getItem('finance_income_cats');
-  return stored ? JSON.parse(stored) : DEFAULT_INCOME_CATS;
+export const getStoredIncomeCats = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('finance_income_cats_v2');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get income cats', e);
+  }
+  return DEFAULT_INCOME_CATS;
 };
-export const setStoredIncomeCats = (cats: string[]) => {
-  localStorage.setItem('finance_income_cats', JSON.stringify(cats));
+export const subscribeStoredIncomeCats = (callback: (cats: string[]) => void): (() => void) => {
+  return subscribeToSettings('finance_income_cats_v2', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_INCOME_CATS);
+    }
+  });
 };
-export const getStoredExpenseCats = (): string[] => {
-  const stored = localStorage.getItem('finance_expense_cats');
-  return stored ? JSON.parse(stored) : DEFAULT_EXPENSE_CATS;
+export const setStoredIncomeCats = async (cats: string[]) => {
+  try {
+    await saveSettings('finance_income_cats_v2', cats);
+  } catch (e) {
+    console.error('Failed to save income cats', e);
+  }
 };
-export const setStoredExpenseCats = (cats: string[]) => {
-  localStorage.setItem('finance_expense_cats', JSON.stringify(cats));
+
+export const getStoredExpenseCats = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('finance_expense_cats_v2');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get expense cats', e);
+  }
+  return DEFAULT_EXPENSE_CATS;
+};
+export const subscribeStoredExpenseCats = (callback: (cats: string[]) => void): (() => void) => {
+  return subscribeToSettings('finance_expense_cats_v2', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_EXPENSE_CATS);
+    }
+  });
+};
+export const setStoredExpenseCats = async (cats: string[]) => {
+  try {
+    await saveSettings('finance_expense_cats_v2', cats);
+  } catch (e) {
+    console.error('Failed to save expense cats', e);
+  }
+};
+
+const DEFAULT_SUPPLIER_CATS = [
+  'Service Sparepart',
+  'Buy_Handset',
+  'Buy Second_Handset',
+  'KS',
+  'Oo_poppi',
+  'Sky_Helden',
+  'Accessories Company',
+  'ASM',
+  'B2B',
+  'Nwe Nwe Win',
+  'MSN',
+  'Popular_CoverShop',
+  'KoWaiYan',
+  'HOCO',
+  'REMAX',
+  'DawKhanYin'
+];
+
+export const getStoredSupplierCats = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('finance_supplier_cats');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get supplier cats', e);
+  }
+  return DEFAULT_SUPPLIER_CATS;
+};
+
+export const subscribeStoredSupplierCats = (callback: (cats: string[]) => void): (() => void) => {
+  return subscribeToSettings('finance_supplier_cats', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_SUPPLIER_CATS);
+    }
+  });
+};
+
+export const setStoredSupplierCats = async (cats: string[]) => {
+  try {
+    await saveSettings('finance_supplier_cats', cats);
+  } catch (e) {
+    console.error('Failed to save supplier cats', e);
+  }
 };
 
 export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'settings'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'supplier' | 'settings'>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleSignOutClick = async () => {
-    try {
-      const txs = await getTransactions();
-      const backupData = JSON.stringify(txs, null, 2);
-      const blob = new Blob([backupData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `HeinHtetSan+Finance+${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Auto backup failed', e);
-    }
+  const handleBackClick = () => {
     onBack();
   };
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: DollarSign },
+    { id: 'supplier', label: 'Supplier', icon: Package },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -103,11 +209,11 @@ export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
 
         <div className="p-4 border-t border-slate-100">
           <button 
-            onClick={handleSignOutClick}
-            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl text-sm font-medium transition-colors"
+            onClick={handleBackClick}
+            className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 rounded-xl text-sm font-medium transition-colors"
           >
-            <LogOut size={18} />
-            Sign Out
+            <ArrowLeft size={18} />
+            Back to Home
           </button>
         </div>
       </aside>
@@ -123,6 +229,7 @@ export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 w-full min-h-screen overflow-x-hidden">
         {activeView === 'overview' && <FinanceOverview />}
+        {activeView === 'supplier' && <FinanceSupplier />}
         {activeView === 'settings' && <FinanceSettings />}
       </main>
     </div>
@@ -167,6 +274,7 @@ const FinanceOverview = () => {
 
   const [incomeCats, setIncomeCats] = useState<string[]>([]);
   const [expenseCats, setExpenseCats] = useState<string[]>([]);
+  const [supplierCats, setSupplierCats] = useState<string[]>([]);
 
   // Filters
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'range'>('all');
@@ -189,8 +297,14 @@ const FinanceOverview = () => {
 
   useEffect(() => {
     loadTransactions();
-    setIncomeCats(getStoredIncomeCats());
-    setExpenseCats(getStoredExpenseCats());
+    const unsubIncome = subscribeStoredIncomeCats(setIncomeCats);
+    const unsubExpense = subscribeStoredExpenseCats(setExpenseCats);
+    const unsubSupplier = subscribeStoredSupplierCats(setSupplierCats);
+    return () => {
+      unsubIncome();
+      unsubExpense();
+      unsubSupplier();
+    };
   }, [showForm]);
 
   const handleEdit = (tx: Transaction) => {
@@ -337,6 +451,9 @@ const FinanceOverview = () => {
                     <optgroup label="Expense">
                       {expenseCats.map(c => <option key={`exp-${c}`} value={c}>{c}</option>)}
                     </optgroup>
+                    <optgroup label="Supplier">
+                      {supplierCats.map(c => <option key={`sup-${c}`} value={c}>{c}</option>)}
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -418,9 +535,18 @@ const FinanceOverview = () => {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                 <select required value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                   <option value="" disabled>Select category</option>
-                  {(type === 'income' ? incomeCats : expenseCats).map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                  {type === 'income' ? (
+                    incomeCats.map(c => <option key={c} value={c}>{c}</option>)
+                  ) : (
+                    <>
+                      <optgroup label="General Expenses">
+                        {expenseCats.map(c => <option key={c} value={c}>{c}</option>)}
+                      </optgroup>
+                      <optgroup label="Supplier Categories">
+                        {supplierCats.map(c => <option key={c} value={c}>{c}</option>)}
+                      </optgroup>
+                    </>
+                  )}
                 </select>
               </div>
               <div>
@@ -571,6 +697,198 @@ const FinanceOverview = () => {
   );
 };
 
+const FinanceSupplier = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [supplierCats, setSupplierCats] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'range'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+
+  const loadTransactions = async () => {
+    const txs = await getTransactions();
+    setTransactions(txs.sort((a, b) => b.createdAt - a.createdAt));
+  };
+
+  useEffect(() => {
+    loadTransactions();
+    const unsub = subscribeStoredSupplierCats(setSupplierCats);
+    return () => unsub();
+  }, []);
+
+  const supplierTransactions = transactions.filter(t => supplierCats.includes(t.category));
+
+  const filteredTransactions = supplierTransactions.filter(t => {
+    let dateMatch = true;
+    if (dateFilter === 'today') dateMatch = isToday(t.createdAt);
+    if (dateFilter === 'yesterday') dateMatch = isYesterday(t.createdAt);
+    if (dateFilter === 'range') dateMatch = isInRange(t.createdAt, startDate, endDate);
+    
+    let searchMatch = true;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      searchMatch = 
+        t.category.toLowerCase().includes(term) ||
+        (t.description && t.description.toLowerCase().includes(term)) ||
+        t.amount.toString().includes(term);
+    }
+    
+    let categoryMatch = true;
+    if (supplierFilter) {
+      categoryMatch = t.category === supplierFilter;
+    }
+    
+    return dateMatch && searchMatch && categoryMatch;
+  });
+
+  const incomesForSupplierTransactions = transactions.filter(t => 
+    t.category === 'Daily Accessories' || 
+    t.category === 'Installement' || 
+    t.category === 'handset sale'
+  );
+  const filteredIncomesForSupplier = incomesForSupplierTransactions.filter(t => {
+    let dateMatch = true;
+    if (dateFilter === 'today') dateMatch = isToday(t.createdAt);
+    if (dateFilter === 'yesterday') dateMatch = isYesterday(t.createdAt);
+    if (dateFilter === 'range') dateMatch = isInRange(t.createdAt, startDate, endDate);
+    return dateMatch;
+  });
+
+  const totalIncomesForSupplier = filteredIncomesForSupplier.reduce((sum, t) => sum + t.amount, 0);
+  const totalSupplierExpense = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const remainingAmount = totalIncomesForSupplier - totalSupplierExpense;
+
+  return (
+    <>
+      <header className="bg-white px-6 lg:px-8 py-5 border-b border-slate-200 sticky top-0 z-10 shadow-sm pt-16 lg:pt-5">
+        <h1 className="text-xl font-bold text-slate-800">Supplier Overview</h1>
+        <p className="text-xs text-slate-500 font-medium mt-1">Track your expenses and orders from suppliers</p>
+      </header>
+
+      <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search descriptions, amounts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Supplier</label>
+                <select
+                  value={supplierFilter}
+                  onChange={(e) => setSupplierFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
+                >
+                  <option value="">All Suppliers</option>
+                  {supplierCats.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 w-full items-center">
+            <button 
+              onClick={() => setDateFilter('all')} 
+              className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap ${dateFilter === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >All</button>
+            <button 
+              onClick={() => setDateFilter('today')} 
+              className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap ${dateFilter === 'today' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >Today</button>
+            <button 
+              onClick={() => setDateFilter('yesterday')} 
+              className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap ${dateFilter === 'yesterday' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >Yesterday</button>
+            <button 
+              onClick={() => setDateFilter('range')} 
+              className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors whitespace-nowrap ${dateFilter === 'range' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            >Range</button>
+            
+            {dateFilter === 'range' && (
+              <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full md:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700"
+                />
+                <span className="text-slate-400">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full md:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
+            <p className="text-sm font-semibold text-slate-500 mb-1">Acc, Install & Handset</p>
+            <h3 className="text-2xl font-bold text-emerald-600">{totalIncomesForSupplier.toLocaleString()} <span className="text-sm opacity-70">MMK</span></h3>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
+            <p className="text-sm font-semibold text-slate-500 mb-1">Supplier Purchases</p>
+            <h3 className="text-2xl font-bold text-red-500">{totalSupplierExpense.toLocaleString()} <span className="text-sm opacity-70">MMK</span></h3>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
+            <p className="text-sm font-semibold text-slate-500 mb-1">Remaining Amount</p>
+            <h3 className={`text-2xl font-bold ${remainingAmount >= 0 ? 'text-slate-800' : 'text-red-600'}`}>{remainingAmount.toLocaleString()} <span className="text-sm opacity-70">MMK</span></h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+             <Package size={18} className="text-indigo-500" />
+             <h3 className="font-semibold text-slate-800">Recent Supplier Transactions</h3>
+           </div>
+           
+           {filteredTransactions.length === 0 ? (
+             <div className="text-center p-12 text-slate-400">
+               <Package size={48} className="mx-auto text-slate-200 mb-3" />
+               <p className="font-medium">No supplier transactions found</p>
+             </div>
+           ) : (
+             <div className="divide-y divide-slate-100">
+               {filteredTransactions.map(tx => (
+                 <div key={tx.id} className="p-4 sm:px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                   <div className="flex items-center gap-4">
+                     <div>
+                       <p className="font-bold text-slate-800">{tx.category}</p>
+                       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 mt-1">
+                         <Calendar size={12} />
+                         <span>{new Date(tx.createdAt).toLocaleDateString()}</span>
+                         {tx.description && <span className="hidden sm:inline before:content-['•'] before:mx-1 before:text-slate-300">{tx.description}</span>}
+                       </div>
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-2 sm:gap-4">
+                     <span className="font-bold text-slate-700">
+                       {tx.amount.toLocaleString()} MMK
+                     </span>
+                   </div>
+                 </div>
+               ))}
+             </div>
+           )}
+        </div>
+      </div>
+    </>
+  );
+};
+
 const FinanceSettings = () => {
   return (
     <>
@@ -582,25 +900,37 @@ const FinanceSettings = () => {
       <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
         <CategorySettings title="Income Categories" type="income" />
         <CategorySettings title="Expense Categories" type="expense" />
+        <CategorySettings title="Supplier Categories" type="supplier" />
         <FinanceBackup />
       </div>
     </>
   );
 };
 
-const CategorySettings = ({ title, type }: { title: string, type: 'income' | 'expense' }) => {
+const CategorySettings = ({ title, type }: { title: string, type: 'income' | 'expense' | 'supplier' }) => {
   const [cats, setCats] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
 
   useEffect(() => {
-    setCats(type === 'income' ? getStoredIncomeCats() : getStoredExpenseCats());
+    let unsub: () => void;
+    if (type === 'income') {
+      unsub = subscribeStoredIncomeCats(setCats);
+    } else if (type === 'expense') {
+      unsub = subscribeStoredExpenseCats(setCats);
+    } else {
+      unsub = subscribeStoredSupplierCats(setCats);
+    }
+    return () => {
+      if (unsub) unsub();
+    };
   }, [type]);
 
   const saveToStorage = (newCats: string[]) => {
     if (type === 'income') setStoredIncomeCats(newCats);
-    else setStoredExpenseCats(newCats);
+    else if (type === 'expense') setStoredExpenseCats(newCats);
+    else setStoredSupplierCats(newCats);
   };
 
   const handleAdd = () => {
@@ -747,8 +1077,16 @@ const FinanceBackup = () => {
   const executeRestore = async () => {
     if (restoreStatus?.data) {
       for (const tx of restoreStatus.data) {
-        if (tx.id && tx.type && tx.amount) {
-          await saveTransaction(tx);
+        if (tx.type && tx.amount !== undefined) {
+          await saveTransaction({
+            ...tx,
+            id: String(tx.id || `TX-${Date.now()}-${Math.floor(Math.random() * 10000)}`).replace(/[^a-zA-Z0-9_-]/g, ''),
+            type: String(tx.type) === 'income' ? 'income' : 'expense',
+            amount: Number(tx.amount || 0),
+            category: String(tx.category || 'Uncategorized'),
+            description: String(tx.description || ''),
+            createdAt: typeof tx.createdAt === 'number' ? tx.createdAt : Date.now(),
+          });
         }
       }
       setRestoreStatus({ message: 'Finance backup restored successfully!', type: 'success' });

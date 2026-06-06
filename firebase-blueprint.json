@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "Ticket": {
+      "title": "Ticket",
+      "description": "A repair ticket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ticketId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "deviceBrand": { "type": "string" },
+        "deviceModel": { "type": "string" },
+        "imei": { "type": "string" },
+        "errorType": { "type": "string" },
+        "estimatedCost": { "type": "string" },
+        "screenLock": { "type": "string" },
+        "screenLockValue": { "type": "string" },
+        "accessories": { "type": "array" },
+        "notes": { "type": "string" },
+        "photos": { "type": "array" },
+        "status": { "type": "string" },
+        "returnedAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "customerName", "phoneNumber", "deviceBrand", "deviceModel", "imei", "errorType", "estimatedCost", "screenLock", "notes", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "type", "amount", "category", "description", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Tickets for a specific user"
+    },
+    "users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Transactions for a specific user"
+    }
+  }
+}

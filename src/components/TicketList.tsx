@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Eye, Edit2, Trash2, Calendar, Filter, X, ChevronDown, Check, Save, Download, FileText, Image as ImageIcon } from 'lucide-react';
+import { Eye, Edit2, Trash2, Calendar, Filter, X, ChevronDown, Check, Save, Download, FileText, Image as ImageIcon, Phone } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 import { getTickets, updateTicket, deleteTicket } from '../db';
 import { Ticket, TicketStatus } from '../types';
-import { getStoredErrorTypes } from './Settings';
+import { getStoredErrorTypes, subscribeStoredErrorTypes } from './Settings';
 import { TicketReceipt } from './TicketReceipt';
 
 // Helper for date calculations
@@ -20,7 +20,7 @@ export const TicketList: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [visibleStatuses, setVisibleStatuses] = useState<string[]>([]);
   const [filterDate, setFilterDate] = useState<string>('All'); // All, Today, Yesterday, Range
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -118,7 +118,8 @@ export const TicketList: React.FC = () => {
     pdf.setFont("helvetica", "normal");
     pdf.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, y);
     y += 6;
-    pdf.text(`Status Filter: ${filterStatus}`, 14, y);
+    const statusList = `Visible Statuses: ${visibleStatuses.join(', ')}`;
+    pdf.text(`Status Filter: ${statusList}`, 14, y);
     y += 6;
     pdf.text(`Date Filter: ${filterDate}`, 14, y);
     if (filterDate === 'Range') {
@@ -177,7 +178,8 @@ export const TicketList: React.FC = () => {
 
   useEffect(() => {
     fetchTickets();
-    setErrorTypes(getStoredErrorTypes());
+    const unsub = subscribeStoredErrorTypes(setErrorTypes);
+    return () => unsub();
   }, []);
 
   const promptPasswordForAction = (callback: () => void, password = '1471656') => {
@@ -301,27 +303,52 @@ export const TicketList: React.FC = () => {
     setIsEditing(true);
   };
 
+  const toggleVisibleStatus = (status: string) => {
+    setVisibleStatuses(prev => 
+      prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+    );
+  };
+
   // Filter Logic
   const filteredTickets = tickets.filter(t => {
-    if (filterStatus !== 'All' && (t.status || 'Pending') !== filterStatus) return false;
+    if (visibleStatuses.length > 0 && !visibleStatuses.includes(t.status || 'Pending')) return false;
     
-    if (filterDate === 'Today') return isToday(t.createdAt);
-    if (filterDate === 'Yesterday') return isYesterday(t.createdAt);
+    const dateToCheck = t.status === 'Return To Customer' && t.returnedAt ? t.returnedAt : t.createdAt;
+
+    if (filterDate === 'Today') return isToday(dateToCheck);
+    if (filterDate === 'Yesterday') return isYesterday(dateToCheck);
     if (filterDate === 'Range') {
       if (!startDate || !endDate) return true;
       const start = new Date(startDate).getTime();
       const end = new Date(endDate).getTime() + 86400000; // End of day
-      if (t.createdAt < start || t.createdAt >= end) return false;
+      if (dateToCheck < start || dateToCheck >= end) return false;
     }
     
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const matchName = t.customerName.toLowerCase().includes(query);
       const matchId = t.ticketId?.toLowerCase().includes(query) || t.id.toLowerCase().includes(query);
-      if (!matchName && !matchId) return false;
+      const matchModel = t.deviceModel.toLowerCase().includes(query);
+      if (!matchName && !matchId && !matchModel) return false;
     }
     
     return true;
+  }).sort((a, b) => {
+    const statusOrder: Record<string, number> = {
+      'Pending': 1,
+      'Completed': 2,
+      'Return To Customer': 3,
+      'Not Repair': 4
+    };
+    const statusA = a.status || 'Pending';
+    const statusB = b.status || 'Pending';
+    const orderA = statusOrder[statusA] || 99;
+    const orderB = statusOrder[statusB] || 99;
+    
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    return b.createdAt - a.createdAt;
   });
 
   const totalAmount = filteredTickets.reduce((sum, ticket) => {
@@ -352,22 +379,28 @@ export const TicketList: React.FC = () => {
           <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase">Search</label>
           <input 
             type="text" 
-            placeholder="Search Name or Ticket ID..." 
+            placeholder="Search Name, ID or Model..." 
             value={searchQuery} 
             onChange={e => setSearchQuery(e.target.value)} 
             className="w-full px-3 py-2 bg-[#F9FAFB] border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-indigo-500"
           />
         </div>
 
-        <div>
-          <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase">Status (Action List)</label>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#F9FAFB] border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-indigo-500">
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Completed">Completed</option>
-            <option value="Not Repair">Not Repair</option>
-            <option value="Return To Customer">Return To Customer</option>
-          </select>
+        <div className="flex-1 md:flex-none">
+          <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase">Show Statuses</label>
+          <div className="flex flex-wrap items-center gap-3 bg-[#F9FAFB] border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600">
+            {['Pending', 'Completed', 'Not Repair', 'Return To Customer'].map(status => (
+              <label key={status} className="flex items-center gap-1.5 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={visibleStatuses.includes(status)} 
+                  onChange={() => toggleVisibleStatus(status)}
+                  className="rounded border-slate-300 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span>{status}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -417,15 +450,15 @@ export const TicketList: React.FC = () => {
             <p>No tickets match your filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-280px)]">
             <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-[#F8F9FA] text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Device Info</th>
-                  <th className="px-6 py-4">Status & Action</th>
-                  <th className="px-6 py-4 text-right">Date</th>
-                  <th className="px-6 py-4 text-right">Settings</th>
+              <thead className="bg-[#F8F9FA] text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-100 sticky top-0 z-10">
+                <tr className="shadow-sm">
+                  <th className="px-6 py-4 bg-[#F8F9FA]">Customer</th>
+                  <th className="px-6 py-4 bg-[#F8F9FA]">Device Info</th>
+                  <th className="px-6 py-4 bg-[#F8F9FA]">Status & Action</th>
+                  <th className="px-6 py-4 text-right bg-[#F8F9FA]">Date</th>
+                  <th className="px-6 py-4 text-right bg-[#F8F9FA]">Settings</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -436,7 +469,12 @@ export const TicketList: React.FC = () => {
                     <tr key={ticket.id} className="hover:bg-[#F8F9FA] transition-colors cursor-pointer" onClick={() => openTicket(ticket)}>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-slate-800">{ticket.customerName}</div>
-                        <div className="text-slate-400 text-xs mt-0.5">{ticket.phoneNumber}</div>
+                        <div className="text-slate-400 text-xs mt-0.5 flex items-center gap-1">
+                          {ticket.phoneNumber}
+                          <a href={`tel:${ticket.phoneNumber}`} onClick={(e) => e.stopPropagation()} className="text-indigo-500 hover:text-indigo-600 transition-colors p-1" title="Call Customer">
+                            <Phone size={12} />
+                          </a>
+                        </div>
                         {ticket.ticketId && <div className="text-indigo-600 text-[10px] font-bold mt-1 tracking-wide">{ticket.ticketId}</div>}
                       </td>
                       <td className="px-6 py-4">
@@ -537,7 +575,12 @@ export const TicketList: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Phone Number</p>
-                      <p className="font-mono text-slate-700">{selectedTicket.phoneNumber}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-slate-700">{selectedTicket.phoneNumber}</p>
+                        <a href={`tel:${selectedTicket.phoneNumber}`} className="text-indigo-500 hover:text-indigo-600 transition-colors p-1 bg-indigo-50 rounded-full" title="Call Customer">
+                          <Phone size={14} />
+                        </a>
+                      </div>
                     </div>
                     <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Device & Model</p>
@@ -566,7 +609,7 @@ export const TicketList: React.FC = () => {
                     )}
                     {selectedTicket.status === 'Return To Customer' && selectedTicket.realCost && (
                       <div>
-                        <p className="text-[11px] font-bold text-emerald-500 uppercase mb-1">Real Cost</p>
+                        <p className="text-[11px] font-bold text-emerald-500 uppercase mb-1">Real Cost (Final Amount)</p>
                         <p className="font-semibold text-emerald-600">{selectedTicket.realCost}</p>
                       </div>
                     )}
@@ -639,7 +682,7 @@ export const TicketList: React.FC = () => {
                       </div>
                       {editData.status === 'Return To Customer' && (
                         <div>
-                          <label className="block text-xs font-semibold text-slate-500 mb-1">Real Cost</label>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Real Cost (Final Amount)</label>
                           <input type="text" name="realCost" value={editData.realCost || ''} onChange={handleEditChange} className="w-full p-2 border border-slate-200 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                         </div>
                       )}

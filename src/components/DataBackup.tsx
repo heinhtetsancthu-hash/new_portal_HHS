@@ -48,11 +48,26 @@ export const DataBackup: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const content = event.target?.result as string;
-        const tickets: Ticket[] = JSON.parse(content);
+        const parsedTickets = JSON.parse(content);
         
-        if (!Array.isArray(tickets)) {
+        if (!Array.isArray(parsedTickets)) {
           throw new Error('Invalid format');
         }
+
+        const tickets: Ticket[] = parsedTickets.map(t => ({
+          ...t,
+          id: String(t.id || `TKT-${Date.now()}-${Math.floor(Math.random() * 10000)}`).replace(/[^a-zA-Z0-9_-]/g, ''),
+          customerName: String(t.customerName || ''),
+          phoneNumber: String(t.phoneNumber || ''),
+          deviceBrand: String(t.deviceBrand || ''),
+          deviceModel: String(t.deviceModel || ''),
+          imei: String(t.imei || ''),
+          errorType: String(t.errorType || ''),
+          estimatedCost: String(t.estimatedCost || ''),
+          screenLock: String(t.screenLock || ''),
+          notes: String(t.notes || ''),
+          createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
+        }));
 
         await clearAllTickets();
         await insertTickets(tickets);
