@@ -69,11 +69,10 @@ export const TicketList: React.FC = () => {
     if (!receiptRef.current || !selectedTicket) return;
     setIsExporting(true);
     try {
-      const imgData = await toPng(receiptRef.current, { pixelRatio: 2 });
-      const pdf = new jsPDF('p', 'mm', 'a5');
+      const imgData = await toPng(receiptRef.current, { pixelRatio: 2, backgroundColor: '#ffffff' });
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      // Since receipt is 148mm by 210mm (which is exactly A5)
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pdfHeight = (receiptRef.current.offsetHeight * pdfWidth) / receiptRef.current.offsetWidth;
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${selectedTicket.customerName}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (e) {

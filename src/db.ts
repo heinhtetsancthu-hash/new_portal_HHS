@@ -1,4 +1,4 @@
-import { Ticket, Transaction, StockItem, SaleItem, InstallmentSaleItem } from './types';
+import { Ticket, Transaction, StockItem, SaleItem, InstallmentSaleItem, SparepartItem } from './types';
 import { db, auth } from './firebase';
 import { doc, setDoc, getDocs, getDoc, deleteDoc, collection, writeBatch, onSnapshot } from 'firebase/firestore';
 
@@ -383,6 +383,70 @@ export const deleteInstallmentSaleItem = async (id: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, path, id));
     await addNotification(`Installment sale deleted`, 'warning');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const saveSparepartItem = async (sparepartItem: SparepartItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/spareparts`;
+  try {
+    await setDoc(doc(db, path, sparepartItem.id), sparepartItem);
+    await addNotification(`Sparepart item ${sparepartItem.name} saved`, 'success');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const getSparepartItems = async (): Promise<SparepartItem[]> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/spareparts`;
+  try {
+    const querySnapshot = await getDocs(collection(db, path));
+    const items: SparepartItem[] = [];
+    querySnapshot.forEach((doc) => {
+      items.push(doc.data() as SparepartItem);
+    });
+    return items.sort((a, b) => b.createdAt - a.createdAt);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return [];
+  }
+};
+
+export const subscribeToSpareparts = (callback: (items: SparepartItem[]) => void): (() => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    return () => {};
+  }
+  
+  const path = `users/${userId}/spareparts`;
+  
+  try {
+    const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+      const items: SparepartItem[] = [];
+      snapshot.forEach((doc) => {
+        items.push(doc.data() as SparepartItem);
+      });
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      callback(items);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
+    return unsubscribe;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+};
+
+export const deleteSparepartItem = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/spareparts`;
+  try {
+    await deleteDoc(doc(db, path, id));
+    await addNotification(`Sparepart item deleted`, 'warning');
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }

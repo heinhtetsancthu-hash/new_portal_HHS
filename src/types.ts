@@ -57,6 +57,16 @@ export interface InstallmentSaleItem {
   soldAt: number;
 }
 
+export interface SparepartItem {
+  id: string;
+  name: string;
+  item: string;
+  photo1: string;
+  photo2: string;
+  photo3: string;
+  createdAt: number;
+}
+
 export interface Ticket {
   id: string;
   ticketId?: string;

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { PlusCircle, List, Database, Settings, ArrowLeft, Menu, X } from 'lucide-react';
-import { getTickets } from '../db';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, List, Database, Settings, ArrowLeft, Menu, X, ShoppingCart } from 'lucide-react';
+import { getTickets, subscribeToSpareparts } from '../db';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,10 +11,19 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveView, onBack }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sparepartsCount, setSparepartsCount] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToSpareparts((items) => {
+      setSparepartsCount(items.length);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const navItems = [
     { id: 'new', label: 'New Ticket', icon: PlusCircle },
     { id: 'list', label: 'Ticket List', icon: List },
+    { id: 'buy_sparepart', label: 'Buy Sparepart', icon: ShoppingCart },
     { id: 'backup', label: 'Data Backup', icon: Database },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -47,12 +56,19 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveV
               <button
                 key={item.id}
                 onClick={() => { setActiveView(item.id); setMobileOpen(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-[#EEF2FF] text-indigo-600' : 'text-slate-500 hover:bg-slate-50'
                 }`}
               >
-                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                {item.label}
+                <div className="flex items-center gap-3">
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                  {item.label}
+                </div>
+                {item.id === 'buy_sparepart' && sparepartsCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center justify-center">
+                    {sparepartsCount}
+                  </span>
+                )}
               </button>
             );
           })}

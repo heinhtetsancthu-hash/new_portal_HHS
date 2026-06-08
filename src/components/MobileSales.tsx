@@ -66,6 +66,7 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
   const [isInstSelling, setIsInstSelling] = useState(false);
   const [hideZeroBalance, setHideZeroBalance] = useState(false);
   const [showCompleteCustomer, setShowCompleteCustomer] = useState(false);
+  const [instSearchTerm, setInstSearchTerm] = useState('');
 
   useEffect(() => {
     const stockItem = stockItems.find(item => item.id === instSelectedStockId || item.imei === instSelectedStockId);
@@ -454,6 +455,16 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
   const filteredInstallments = installmentSaleItems.filter(item => {
     if (hideZeroBalance && (item.remainBalance || 0) <= 0) return false;
     if (showCompleteCustomer && (item.remainBalance || 0) > 0) return false;
+    
+    if (instSearchTerm) {
+      const searchLower = instSearchTerm.toLowerCase();
+      return (
+        item.customerName?.toLowerCase().includes(searchLower) ||
+        item.id?.toLowerCase().includes(searchLower) ||
+        item.model?.toLowerCase().includes(searchLower)
+      );
+    }
+    
     return true;
   });
 
@@ -1266,7 +1277,17 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
                       Installment Sale List
                     </h3>
                     <div className="flex gap-2 flex-wrap justify-end">
-                      <label className="flex items-center gap-2 text-xs text-slate-700 bg-white px-3 py-1.5 rounded-full border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                          type="text"
+                          placeholder="Search ID, Name, Model..."
+                          value={instSearchTerm}
+                          onChange={e => setInstSearchTerm(e.target.value)}
+                          className="pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-shadow w-[220px]"
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-slate-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
                         <input 
                           type="checkbox" 
                           checked={showCompleteCustomer} 

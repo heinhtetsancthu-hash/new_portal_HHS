@@ -7,6 +7,7 @@ import { Settings } from './components/Settings';
 import { DataBackup } from './components/DataBackup';
 import { Finance } from './components/Finance';
 import { MobileSales } from './components/MobileSales';
+import { BuySparepart } from './components/BuySparepart';
 import { GlobalNotifications } from './components/GlobalNotifications';
 import { auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
@@ -142,6 +143,7 @@ export default function App() {
       >
         {activePortalView === 'new' && <NewTicket />}
         {activePortalView === 'list' && <TicketList />}
+        {activePortalView === 'buy_sparepart' && <BuySparepart />}
         {activePortalView === 'backup' && <DataBackup />}
         {activePortalView === 'settings' && (
           <Settings />
