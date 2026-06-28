@@ -96,12 +96,23 @@ export const TicketReceipt = React.forwardRef<HTMLDivElement, TicketReceiptProps
       </div>
 
       {/* Cost */}
-      <div className="flex justify-between items-end mb-6 px-4">
-         <p className="text-[14px] font-bold text-[#64748b] uppercase tracking-wider">Repair Cost</p>
-         <div className="flex items-baseline gap-2">
-           <span className="text-4xl font-bold text-[#4338ca]">{cost || '0'}</span>
-           <span className="text-[14px] font-bold text-[#4338ca]">MMK</span>
-         </div>
+      <div className="flex flex-col gap-2 mb-6 px-4">
+        {ticket.advancePayment && (
+          <div className="flex justify-between items-end">
+            <p className="text-[14px] font-bold text-[#64748b] uppercase tracking-wider">Advance Payment</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-[#10b981]">{ticket.advancePayment}</span>
+              <span className="text-[14px] font-bold text-[#10b981]">MMK</span>
+            </div>
+          </div>
+        )}
+        <div className="flex justify-between items-end">
+           <p className="text-[14px] font-bold text-[#64748b] uppercase tracking-wider">Repair Cost</p>
+           <div className="flex items-baseline gap-2">
+             <span className="text-4xl font-bold text-[#4338ca]">{cost || '0'}</span>
+             <span className="text-[14px] font-bold text-[#4338ca]">MMK</span>
+           </div>
+        </div>
       </div>
 
       {/* Terms */}

@@ -8,13 +8,17 @@ import { DataBackup } from './components/DataBackup';
 import { Finance } from './components/Finance';
 import { MobileSales } from './components/MobileSales';
 import { BuySparepart } from './components/BuySparepart';
+import { BuyAccessories } from './components/BuyAccessories';
+import { SparepartStock } from './components/SparepartStock';
 import { GlobalNotifications } from './components/GlobalNotifications';
 import { auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
+import { Ticket } from './types';
 
 export default function App() {
-  const [view, setView] = useState<'welcome' | 'portal' | 'finance' | 'mobileSales'>('welcome');
+  const [view, setView] = useState<'welcome' | 'portal' | 'finance' | 'mobileSales' | 'accessories'>('welcome');
   const [activePortalView, setActivePortalView] = useState('new');
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [theme, setTheme] = useState<'original' | 'dark'>('original');
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -124,7 +128,7 @@ export default function App() {
 
   const renderView = () => {
     if (view === 'welcome') {
-      return <Welcome onEnter={() => setView('portal')} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onCEIR={() => window.open('https://www.ceir.gov.mm/', '_blank')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
+      return <Welcome onEnter={() => setView('portal')} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
     }
 
     if (view === 'finance') {
@@ -135,15 +139,23 @@ export default function App() {
       return <MobileSales onBack={() => setView('welcome')} />;
     }
 
+    if (view === 'accessories') {
+      return <BuyAccessories onBack={() => setView('welcome')} />;
+    }
+
     return (
       <Layout 
         activeView={activePortalView} 
-        setActiveView={setActivePortalView}
+        setActiveView={(nextView) => {
+          setActivePortalView(nextView);
+          if (nextView !== 'new') setEditingTicket(null);
+        }}
         onBack={() => setView('welcome')}
       >
-        {activePortalView === 'new' && <NewTicket />}
-        {activePortalView === 'list' && <TicketList />}
+        {activePortalView === 'new' && <NewTicket editingTicket={editingTicket} onSaveComplete={() => { setEditingTicket(null); setActivePortalView('list'); }} />}
+        {activePortalView === 'list' && <TicketList onEditTicket={(ticket) => { setEditingTicket(ticket); setActivePortalView('new'); }} />}
         {activePortalView === 'buy_sparepart' && <BuySparepart />}
+        {activePortalView === 'sparepart_stock' && <SparepartStock />}
         {activePortalView === 'backup' && <DataBackup />}
         {activePortalView === 'settings' && (
           <Settings />

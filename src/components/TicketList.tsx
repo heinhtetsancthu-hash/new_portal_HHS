@@ -15,7 +15,11 @@ const isYesterday = (ts: number) => {
   return new Date(ts).toDateString() === yesterday.toDateString();
 };
 
-export const TicketList: React.FC = () => {
+interface TicketListProps {
+  onEditTicket?: (ticket: Ticket) => void;
+}
+
+export const TicketList: React.FC<TicketListProps> = ({ onEditTicket }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -246,12 +250,18 @@ export const TicketList: React.FC = () => {
     e?.stopPropagation();
     if (ticket.status === 'Return To Customer') {
       promptPasswordForAction(() => {
-        openTicket(ticket);
-        setTimeout(startEdit, 0);
+        if (onEditTicket) onEditTicket(ticket);
+        else {
+          openTicket(ticket);
+          setTimeout(startEdit, 0);
+        }
       }, '070288');
     } else {
-      openTicket(ticket);
-      setTimeout(startEdit, 0);
+      if (onEditTicket) onEditTicket(ticket);
+      else {
+        openTicket(ticket);
+        setTimeout(startEdit, 0);
+      }
     }
   };
 
@@ -620,6 +630,18 @@ export const TicketList: React.FC = () => {
                       <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Estimated Cost</p>
                       <p className="text-slate-700">{selectedTicket.estimatedCost || '-'}</p>
                     </div>
+                    {selectedTicket.advancePayment && (
+                      <div>
+                        <p className="text-[11px] font-bold text-emerald-500 uppercase mb-1">Advance Payment</p>
+                        <p className="text-slate-700">{selectedTicket.advancePayment}</p>
+                      </div>
+                    )}
+                    {selectedTicket.usedSparepartName && (
+                      <div>
+                        <p className="text-[11px] font-bold text-indigo-500 uppercase mb-1">Used Sparepart</p>
+                        <p className="text-slate-700 font-medium">{selectedTicket.usedSparepartName}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Screen Lock</p>
                       <p className="text-slate-700">{selectedTicket.screenLock} {selectedTicket.screenLockValue ? `(${selectedTicket.screenLockValue})` : ''}</p>
@@ -674,6 +696,10 @@ export const TicketList: React.FC = () => {
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">IMEI</label>
                         <input type="text" name="imei" value={editData.imei} onChange={handleEditChange} className="w-full p-2 border border-slate-200 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">Adv. Payment</label>
+                        <input type="text" name="advancePayment" value={editData.advancePayment || ''} onChange={handleEditChange} className="w-full p-2 border border-slate-200 rounded-md focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Est. Cost</label>

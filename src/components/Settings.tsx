@@ -106,11 +106,55 @@ export const setStoredSaleTerms = async (terms: string) => {
   }
 };
 
+export const DEFAULT_SPAREPART_CATEGORIES = [
+  'Battery',
+  'Glass',
+  'Speaker',
+  'Middle Flex',
+  'Display',
+  'Camera',
+  'Charging Port',
+  'Other'
+];
+
+export const getStoredSparepartCategories = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('sparepart_categories');
+    if (stored) return stored;
+  } catch (e) {
+    console.error('Failed to get sparepart categories', e);
+  }
+  return DEFAULT_SPAREPART_CATEGORIES;
+};
+
+export const subscribeStoredSparepartCategories = (callback: (types: string[]) => void): (() => void) => {
+  return subscribeToSettings('sparepart_categories', (stored) => {
+    if (stored) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_SPAREPART_CATEGORIES);
+    }
+  });
+};
+
+export const setStoredSparepartCategories = async (types: string[]) => {
+  try {
+    await saveSettings('sparepart_categories', types);
+  } catch (e) {
+    console.error('Failed to save sparepart categories', e);
+  }
+};
+
 export const Settings: React.FC = () => {
   const [errorTypes, setErrorTypes] = useState<string[]>([]);
   const [newItemText, setNewItemText] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+
+  const [sparepartCategories, setSparepartCategories] = useState<string[]>([]);
+  const [newCategoryText, setNewCategoryText] = useState('');
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState<number | null>(null);
+  const [editCategoryText, setEditCategoryText] = useState('');
 
   const [terms, setTerms] = useState('');
   const [termsSaved, setTermsSaved] = useState(false);
@@ -121,10 +165,12 @@ export const Settings: React.FC = () => {
     const unsubErrors = subscribeStoredErrorTypes(setErrorTypes);
     const unsubTerms = subscribeStoredTerms(setTerms);
     const unsubSaleTerms = subscribeStoredSaleTerms(setSaleTerms);
+    const unsubCategories = subscribeStoredSparepartCategories(setSparepartCategories);
     return () => {
       unsubErrors();
       unsubTerms();
       unsubSaleTerms();
+      unsubCategories();
     };
   }, []);
 
@@ -137,15 +183,35 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleAddCategory = () => {
+    if (newCategoryText.trim()) {
+      const updated = [...sparepartCategories, newCategoryText.trim()];
+      setSparepartCategories(updated);
+      setStoredSparepartCategories(updated);
+      setNewCategoryText('');
+    }
+  };
+
   const handleDelete = (index: number) => {
     const updated = errorTypes.filter((_, i) => i !== index);
     setErrorTypes(updated);
     setStoredErrorTypes(updated);
   };
 
+  const handleDeleteCategory = (index: number) => {
+    const updated = sparepartCategories.filter((_, i) => i !== index);
+    setSparepartCategories(updated);
+    setStoredSparepartCategories(updated);
+  };
+
   const handleStartEdit = (index: number) => {
     setEditingIndex(index);
     setEditText(errorTypes[index]);
+  };
+
+  const handleStartEditCategory = (index: number) => {
+    setEditingCategoryIndex(index);
+    setEditCategoryText(sparepartCategories[index]);
   };
 
   const handleSaveEdit = (index: number) => {
@@ -157,6 +223,17 @@ export const Settings: React.FC = () => {
     }
     setEditingIndex(null);
     setEditText('');
+  };
+
+  const handleSaveEditCategory = (index: number) => {
+    if (editCategoryText.trim()) {
+      const updated = [...sparepartCategories];
+      updated[index] = editCategoryText.trim();
+      setSparepartCategories(updated);
+      setStoredSparepartCategories(updated);
+    }
+    setEditingCategoryIndex(null);
+    setEditCategoryText('');
   };
 
   const handleSaveTerms = () => {
@@ -247,6 +324,85 @@ export const Settings: React.FC = () => {
             ))}
             {errorTypes.length === 0 && (
               <p className="text-center text-sm text-slate-400 py-6">No error types configured.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sparepart Category Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">Sparepart Categories Configuration</h3>
+            <p className="text-sm text-slate-500 mt-1">Manage the categories available for sparepart stock.</p>
+          </div>
+          <button
+            onClick={() => {
+              setSparepartCategories(DEFAULT_SPAREPART_CATEGORIES);
+              setStoredSparepartCategories(DEFAULT_SPAREPART_CATEGORIES);
+            }}
+            className="text-sm px-3 py-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+          >
+            Reset to Defaults
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="flex gap-2 mb-6">
+            <input
+              type="text"
+              value={newCategoryText}
+              onChange={(e) => setNewCategoryText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              placeholder="Add new category..."
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            />
+            <button
+              onClick={handleAddCategory}
+              disabled={!newCategoryText.trim()}
+              className="bg-[#5C67ED] hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 shadow-sm"
+            >
+              <Plus size={18} />
+              Add
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {sparepartCategories.map((type, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-[#F9FAFB] shadow-sm">
+                {editingCategoryIndex === index ? (
+                  <div className="flex items-center gap-2 flex-1 mr-4">
+                    <input
+                      type="text"
+                      value={editCategoryText}
+                      onChange={(e) => setEditCategoryText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveEditCategory(index)}
+                      className="flex-1 px-3 py-1.5 border border-indigo-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      autoFocus
+                    />
+                    <button onClick={() => handleSaveEditCategory(index)} className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors">
+                      <Check size={16} />
+                    </button>
+                    <button onClick={() => setEditingCategoryIndex(null)} className="p-1.5 text-slate-400 hover:bg-slate-200 rounded-md transition-colors">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium text-slate-700">{type}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleStartEditCategory(index)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteCategory(index)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            {sparepartCategories.length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-6">No categories configured.</p>
             )}
           </div>
         </div>

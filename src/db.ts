@@ -1,4 +1,4 @@
-import { Ticket, Transaction, StockItem, SaleItem, InstallmentSaleItem, SparepartItem } from './types';
+import { Ticket, Transaction, StockItem, SaleItem, InstallmentSaleItem, SparepartItem, AccessoryOrder, SparepartStockItem } from './types';
 import { db, auth } from './firebase';
 import { doc, setDoc, getDocs, getDoc, deleteDoc, collection, writeBatch, onSnapshot } from 'firebase/firestore';
 
@@ -451,5 +451,118 @@ export const deleteSparepartItem = async (id: string): Promise<void> => {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 };
+
+export const saveAccessoryOrder = async (order: AccessoryOrder): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/accessory_orders`;
+  try {
+    await setDoc(doc(db, path, order.id), order);
+    await addNotification(`Accessory order for ${order.customerName} saved`, 'success');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const subscribeToAccessoryOrders = (callback: (items: AccessoryOrder[]) => void): (() => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    return () => {};
+  }
+  
+  const path = `users/${userId}/accessory_orders`;
+  
+  try {
+    const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+      const items: AccessoryOrder[] = [];
+      snapshot.forEach((doc) => {
+        items.push(doc.data() as AccessoryOrder);
+      });
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      callback(items);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
+    return unsubscribe;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+};
+
+export const deleteAccessoryOrder = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/accessory_orders`;
+  try {
+    await deleteDoc(doc(db, path, id));
+    await addNotification(`Accessory order deleted`, 'warning');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const saveSparepartStockItem = async (item: SparepartStockItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/sparepart_stocks`;
+  try {
+    await setDoc(doc(db, path, item.id), item);
+    await addNotification(`Sparepart stock for ${item.model} saved`, 'success');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const subscribeToSparepartStockItems = (callback: (items: SparepartStockItem[]) => void): (() => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    return () => {};
+  }
+  
+  const path = `users/${userId}/sparepart_stocks`;
+  
+  try {
+    const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+      const items: SparepartStockItem[] = [];
+      snapshot.forEach((doc) => {
+        items.push(doc.data() as SparepartStockItem);
+      });
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      callback(items);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
+    return unsubscribe;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+};
+
+export const deleteSparepartStockItem = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/sparepart_stocks`;
+  try {
+    await deleteDoc(doc(db, path, id));
+    await addNotification(`Sparepart stock item deleted`, 'warning');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const decrementSparepartStockItemCount = async (id: string, decrementBy: number = 1): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/sparepart_stocks`;
+  try {
+    const docRef = doc(db, path, id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data() as SparepartStockItem;
+      const newCount = Math.max(0, data.count - decrementBy);
+      await setDoc(docRef, { count: newCount }, { merge: true });
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
 
 

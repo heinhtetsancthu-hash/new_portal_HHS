@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, List, Database, Settings, ArrowLeft, Menu, X, ShoppingCart } from 'lucide-react';
+import { PlusCircle, List, Database, Settings, ArrowLeft, Menu, X, ShoppingCart, Archive } from 'lucide-react';
 import { getTickets, subscribeToSpareparts } from '../db';
 
 interface LayoutProps {
@@ -24,6 +24,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeView, setActiveV
     { id: 'new', label: 'New Ticket', icon: PlusCircle },
     { id: 'list', label: 'Ticket List', icon: List },
     { id: 'buy_sparepart', label: 'Buy Sparepart', icon: ShoppingCart },
+    { id: 'sparepart_stock', label: 'Sparepart Stock', icon: Archive },
     { id: 'backup', label: 'Data Backup', icon: Database },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];

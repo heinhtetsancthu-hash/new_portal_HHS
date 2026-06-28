@@ -1,19 +1,32 @@
-import React from 'react';
-import { Settings, Wrench, DollarSign, Moon, Sun, LogOut, ShoppingCart, User, Globe } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Settings, Wrench, DollarSign, Moon, Sun, LogOut, ShoppingCart, User, Globe, ShoppingBag } from 'lucide-react';
+import { subscribeToAccessoryOrders } from '../db';
+import { auth } from '../firebase';
 
 interface WelcomeProps {
   onEnter: () => void;
   onFinance: () => void;
   onMobileSales: () => void;
-  onCEIR: () => void;
+  onAccessories: () => void;
   theme: 'original' | 'dark';
   toggleTheme: () => void;
   onSignOut: () => void;
   user?: any;
 }
 
-export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSales, onCEIR, theme, toggleTheme, onSignOut, user }) => {
+export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSales, onAccessories, theme, toggleTheme, onSignOut, user }) => {
   const isDark = theme === 'dark';
+  const [accessoryOrdersCount, setAccessoryOrdersCount] = useState(0);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    if (auth.currentUser) {
+      unsubscribe = subscribeToAccessoryOrders((items) => {
+        setAccessoryOrdersCount(items.length);
+      });
+    }
+    return () => unsubscribe();
+  }, [user]);
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center font-sans ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>
@@ -84,11 +97,18 @@ export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSa
           </button>
           
           <button 
-            onClick={onCEIR}
+            onClick={onAccessories}
             className={`w-full font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm ${isDark ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-500 hover:bg-indigo-600 text-white'}`}
           >
-            <Globe size={20} />
-            CEIR
+            <div className="flex items-center gap-2 relative">
+               <ShoppingBag size={20} />
+               AccessoriesOrder
+               {accessoryOrdersCount > 0 && (
+                 <span className="absolute -top-2 -right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                   {accessoryOrdersCount}
+                 </span>
+               )}
+            </div>
           </button>
         </div>
       </div>

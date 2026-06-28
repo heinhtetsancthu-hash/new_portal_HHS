@@ -1,10 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Save, ImagePlus, X, Lock, AlertCircle } from 'lucide-react';
-import { Ticket } from '../types';
-import { saveTicket } from '../db';
+import { Ticket, SparepartStockItem } from '../types';
+import { saveTicket, updateTicket, subscribeToSparepartStockItems, decrementSparepartStockItemCount } from '../db';
 import { getStoredErrorTypes, subscribeStoredErrorTypes } from './Settings';
 
-export const NewTicket: React.FC = () => {
+interface NewTicketProps {
+  editingTicket?: Ticket | null;
+  onSaveComplete?: () => void;
+}
+
+export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveComplete }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -13,6 +18,7 @@ export const NewTicket: React.FC = () => {
     deviceBrand: '',
     deviceModel: '',
     imei: '',
+    advancePayment: '',
     errorType: '',
     estimatedCost: '',
     screenLock: 'None',
@@ -23,9 +29,36 @@ export const NewTicket: React.FC = () => {
   const [errorTypes, setErrorTypes] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [haveStock, setHaveStock] = useState(false);
+  const [stockItems, setStockItems] = useState<SparepartStockItem[]>([]);
+  const [selectedStockIds, setSelectedStockIds] = useState<string[]>(['']);
+  const [stockSearchTerm, setStockSearchTerm] = useState('');
+  const [openDropdownIndex, setOpenDropdownIndex] = useState<number | null>(null);
+  const stockDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const unsub = subscribeStoredErrorTypes(setErrorTypes);
-    return () => unsub();
+    const handleClickOutside = (event: MouseEvent) => {
+      if (stockDropdownRef.current && !stockDropdownRef.current.contains(event.target as Node)) {
+        setOpenDropdownIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const filteredStockItems = stockItems.filter(item => 
+    [item.model, item.name].filter(Boolean).join(' ').toLowerCase().includes(stockSearchTerm.toLowerCase())
+  );
+
+  useEffect(() => {
+    const unsubErrorTypes = subscribeStoredErrorTypes(setErrorTypes);
+    const unsubStock = subscribeToSparepartStockItems(setStockItems);
+    return () => {
+      unsubErrorTypes();
+      unsubStock();
+    };
   }, []);
 
   const [accessories, setAccessories] = useState({
@@ -38,6 +71,44 @@ export const NewTicket: React.FC = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (editingTicket) {
+      setFormData({
+        customerName: editingTicket.customerName,
+        phoneNumber: editingTicket.phoneNumber,
+        deviceBrand: editingTicket.deviceBrand,
+        deviceModel: editingTicket.deviceModel,
+        imei: editingTicket.imei || '',
+        advancePayment: editingTicket.advancePayment || '',
+        errorType: editingTicket.errorType || '',
+        estimatedCost: editingTicket.estimatedCost || '',
+        screenLock: editingTicket.screenLock,
+        screenLockValue: editingTicket.screenLockValue || '',
+        notes: editingTicket.notes || ''
+      });
+      const newAcc = { Charger: false, 'Memory Card': false, Battery: false, 'Sim Card': false };
+      editingTicket.accessories.forEach(a => {
+        if (a in newAcc) {
+          (newAcc as any)[a] = true;
+        }
+      });
+      setAccessories(newAcc);
+      setPhotos(editingTicket.photos || []);
+      
+      if (editingTicket.haveStock) {
+        setHaveStock(true);
+        if (editingTicket.usedSparepartId) {
+          setSelectedStockIds(editingTicket.usedSparepartId.split(',').filter(Boolean));
+        } else {
+          setSelectedStockIds(['']);
+        }
+      } else {
+        setHaveStock(false);
+        setSelectedStockIds(['']);
+      }
+    }
+  }, [editingTicket]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -74,6 +145,12 @@ export const NewTicket: React.FC = () => {
       return;
     }
     
+    const filteredSelectedIds = haveStock ? selectedStockIds.filter(Boolean) : [];
+    if (haveStock && filteredSelectedIds.length === 0) {
+      setErrorMsg("Please select a sparepart from the stock.");
+      return;
+    }
+    
     setIsSaving(true);
     setSaveSuccess(false);
     setErrorMsg(null);
@@ -82,27 +159,73 @@ export const NewTicket: React.FC = () => {
         return 'TCK-' + Math.floor(100000 + Math.random() * 900000).toString();
       };
       
-      const ticket: Ticket = {
+      let usedSparepartName = undefined;
+      if (haveStock && filteredSelectedIds.length > 0) {
+        const itemNames = filteredSelectedIds.map(id => {
+          const item = stockItems.find(s => s.id === id);
+          return item ? [item.model, item.name].filter(Boolean).join(' ') : null;
+        }).filter(Boolean);
+        if (itemNames.length > 0) {
+          usedSparepartName = itemNames.join(', ');
+        }
+      }
+      
+      const ticket: Ticket = editingTicket ? {
+        ...editingTicket,
+        ...formData,
+        screenLock: formData.screenLock as any,
+        accessories: Object.entries(accessories).filter(([_, v]) => v).map(([k]) => k),
+        photos,
+        haveStock,
+      } : {
         id: crypto.randomUUID(),
         ticketId: generateTicketId(),
         ...formData,
         screenLock: formData.screenLock as any,
         accessories: Object.entries(accessories).filter(([_, v]) => v).map(([k]) => k),
         photos,
+        haveStock,
         createdAt: Date.now()
       };
       
-      await saveTicket(ticket);
+      if (haveStock && filteredSelectedIds.length > 0) {
+        ticket.usedSparepartId = filteredSelectedIds.join(',');
+      }
+      
+      if (usedSparepartName) {
+        ticket.usedSparepartName = usedSparepartName;
+      }
+      
+      if (editingTicket) {
+        await updateTicket(ticket);
+      } else {
+        await saveTicket(ticket);
+        
+        if (haveStock && filteredSelectedIds.length > 0) {
+          for (const id of filteredSelectedIds) {
+            await decrementSparepartStockItemCount(id, 1);
+          }
+        }
+      }
+      
       setSaveSuccess(true);
       
-      setFormData({
-        customerName: '', phoneNumber: '', deviceBrand: '', deviceModel: '',
-        imei: '', errorType: '', estimatedCost: '', screenLock: 'None', screenLockValue: '', notes: ''
-      });
-      setAccessories({ Charger: false, 'Memory Card': false, Battery: false, 'Sim Card': false });
-      setPhotos([]);
-      
-      setTimeout(() => setSaveSuccess(false), 3000);
+      if (editingTicket) {
+        setTimeout(() => {
+          if (onSaveComplete) onSaveComplete();
+        }, 1500);
+      } else {
+        setFormData({
+          customerName: '', phoneNumber: '', deviceBrand: '', deviceModel: '',
+          imei: '', advancePayment: '', errorType: '', estimatedCost: '', screenLock: 'None', screenLockValue: '', notes: ''
+        });
+        setAccessories({ Charger: false, 'Memory Card': false, Battery: false, 'Sim Card': false });
+        setPhotos([]);
+        setHaveStock(false);
+        setSelectedStockIds(['']);
+        
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
     } catch (error) {
       console.error('Failed to save ticket', error);
       setErrorMsg('Failed to save ticket. The Local DB might be having issues.');
@@ -112,16 +235,16 @@ export const NewTicket: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col font-sans mb-8">
       <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-slate-800">Open New Ticket</h3>
+        <h3 className="text-lg font-semibold text-slate-800">{editingTicket ? 'Update Ticket' : 'Open New Ticket'}</h3>
         <button
           onClick={handleSave}
           disabled={isSaving}
           className="bg-[#5C67ED] hover:bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-70 shadow-sm"
         >
           <Save size={18} />
-          {isSaving ? 'Saving...' : 'Save'}
+          {isSaving ? 'Saving...' : editingTicket ? 'Update' : 'Save'}
         </button>
       </div>
 
@@ -138,7 +261,7 @@ export const NewTicket: React.FC = () => {
         </div>
       )}
 
-      <div className="p-3 lg:p-4 grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-4">
+      <div className="p-3 lg:p-6 grid grid-cols-1 gap-y-6">
         {/* Left Column */}
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -161,9 +284,15 @@ export const NewTicket: React.FC = () => {
               <input type="text" name="deviceModel" value={formData.deviceModel} onChange={handleInputChange} placeholder="Model" className="w-full px-3 py-1.5 bg-[#F9FAFB] border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wide">IMEI (Optional)</label>
-            <input type="text" name="imei" value={formData.imei} onChange={handleInputChange} placeholder="IMEI" className="w-full px-3 py-1.5 bg-[#F9FAFB] border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wide">IMEI (Optional)</label>
+              <input type="text" name="imei" value={formData.imei} onChange={handleInputChange} placeholder="IMEI" className="w-full px-3 py-1.5 bg-[#F9FAFB] border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wide">Advance Payment (Optional)</label>
+              <input type="text" name="advancePayment" value={formData.advancePayment} onChange={handleInputChange} placeholder="Advance Payment" className="w-full px-3 py-1.5 bg-[#F9FAFB] border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -174,12 +303,123 @@ export const NewTicket: React.FC = () => {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+              <div className="mt-2 flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={haveStock}
+                    onChange={(e) => setHaveStock(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  />
+                  HaveStock
+                </label>
+                <button
+                  type="button"
+                  disabled={!haveStock}
+                  onClick={() => setSelectedStockIds([...selectedStockIds, ''])}
+                  className={`text-[11px] px-2 py-1 rounded font-medium border transition-colors ${haveStock ? 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100 cursor-pointer' : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'}`}
+                >
+                  MutipleSelect
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wide">Estimated Cost</label>
               <input type="text" name="estimatedCost" value={formData.estimatedCost} onChange={handleInputChange} placeholder="Estimated Cost" className="w-full px-3 py-1.5 bg-[#F9FAFB] border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" />
             </div>
           </div>
+          {haveStock && (
+            <div className="mt-2 relative flex flex-col gap-2" ref={stockDropdownRef}>
+              {selectedStockIds.map((selectedStockId, index) => {
+                const isStockDropdownOpen = openDropdownIndex === index;
+                return (
+                  <div key={index} className="relative">
+                    {index === 0 && <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wide">Select Sparepart Stock</label>}
+                    <div className="flex gap-2 items-center">
+                      <div 
+                        className={`w-full bg-[#F9FAFB] border rounded-md text-sm transition-colors text-slate-600 relative flex items-center ${isStockDropdownOpen ? 'border-[#5C67ED] ring-1 ring-[#5C67ED] bg-white' : 'border-slate-200'}`}
+                        onClick={() => {
+                          if (!isStockDropdownOpen) {
+                            setOpenDropdownIndex(index);
+                            setStockSearchTerm('');
+                          }
+                        }}
+                      >
+                          {!isStockDropdownOpen && (
+                             <div className="absolute inset-0 px-3 py-1.5 flex items-center text-slate-600 pointer-events-none whitespace-nowrap overflow-hidden text-ellipsis">
+                                {selectedStockId 
+                                  ? [stockItems.find(i => i.id === selectedStockId)?.model, stockItems.find(i => i.id === selectedStockId)?.name].filter(Boolean).join(' ')
+                                  : "Select Sparepart"}
+                             </div>
+                          )}
+                          
+                          <input
+                            type="text"
+                            className={`w-full px-3 py-1.5 bg-transparent focus:outline-none ${!isStockDropdownOpen ? 'opacity-0 cursor-pointer' : 'opacity-100'}`}
+                            placeholder="Search sparepart..."
+                            value={isStockDropdownOpen ? stockSearchTerm : ''}
+                            onChange={(e) => setStockSearchTerm(e.target.value)}
+                            onFocus={() => { setOpenDropdownIndex(index); setStockSearchTerm(''); }}
+                          />
+                          
+                          {isStockDropdownOpen && (
+                            <div className="absolute z-20 w-[calc(100%+2px)] left-[-1px] right-[-1px] bg-white border border-slate-300 rounded-b-md shadow-lg top-[100%] mt-[1px] max-h-60 overflow-y-auto">
+                                <div 
+                                  className={`px-3 py-2 cursor-pointer text-[#1B6AD2] border-b border-slate-100 ${!selectedStockId ? 'bg-[#1864E1] text-white' : 'hover:bg-slate-50'}`}
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const newArr = [...selectedStockIds];
+                                    newArr[index] = '';
+                                    setSelectedStockIds(newArr);
+                                    setOpenDropdownIndex(null); 
+                                    setStockSearchTerm(''); 
+                                  }}
+                                >
+                                  Select Sparepart
+                                </div>
+                                {filteredStockItems.map(item => (
+                                  <div 
+                                    key={item.id}
+                                    className={`px-3 py-2.5 cursor-pointer text-slate-700 hover:bg-slate-50 border-b border-slate-50 ${selectedStockId === item.id ? 'bg-[#EEF2FF]' : ''}`}
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      const newArr = [...selectedStockIds];
+                                      newArr[index] = item.id;
+                                      setSelectedStockIds(newArr); 
+                                      setOpenDropdownIndex(null); 
+                                      setStockSearchTerm(''); 
+                                    }}
+                                  >
+                                    {[item.model, item.name].filter(Boolean).join(' ')}
+                                  </div>
+                                ))}
+                                {filteredStockItems.length === 0 && (
+                                  <div className="px-3 py-3 text-slate-500 text-center text-sm">
+                                     No parts found
+                                  </div>
+                                )}
+                            </div>
+                          )}
+                      </div>
+                      {index > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newArr = [...selectedStockIds];
+                            newArr.splice(index, 1);
+                            setSelectedStockIds(newArr);
+                          }}
+                          className="text-slate-400 hover:text-red-500 rounded-full p-1 transition-colors flex-shrink-0 bg-slate-50 border border-slate-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right Column */}

@@ -1789,7 +1789,7 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
                     </div>
                     <div className="flex justify-between">
                       <span>Color</span>
-                      <span>-</span>
+                      <span>{viewingInstSale.color || '-'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>IMEI</span>

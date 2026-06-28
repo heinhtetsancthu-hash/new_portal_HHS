@@ -173,6 +173,12 @@ service cloud.firestore {
       match /spareparts/{sparepartId} {
         allow read, write: if isOwner(userId);
       }
+      match /accessory_orders/{orderId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /sparepart_stocks/{stockId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }
