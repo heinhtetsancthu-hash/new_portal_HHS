@@ -10,6 +10,7 @@ export const BuySparepart: React.FC = () => {
 
   // Form State
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [itemDesc1, setItemDesc1] = useState('');
   const [itemDesc2, setItemDesc2] = useState('');
   const [itemDesc3, setItemDesc3] = useState('');
@@ -86,6 +87,7 @@ export const BuySparepart: React.FC = () => {
     const newItem: SparepartItem = {
       id: editingItem ? editingItem.id : Date.now().toString(),
       name,
+      phoneNumber,
       item: combinedItemDesc,
       photo1,
       photo2,
@@ -107,6 +109,7 @@ export const BuySparepart: React.FC = () => {
     e.stopPropagation();
     setEditingItem(item);
     setName(item.name);
+    setPhoneNumber(item.phoneNumber || '');
     const descs = item.item.split('\n');
     setItemDesc1(descs[0] || '');
     setItemDesc2(descs[1] || '');
@@ -121,6 +124,7 @@ export const BuySparepart: React.FC = () => {
   const handleCancelEdit = () => {
     setEditingItem(null);
     setName('');
+    setPhoneNumber('');
     setItemDesc1('');
     setItemDesc2('');
     setItemDesc3('');
@@ -199,16 +203,28 @@ export const BuySparepart: React.FC = () => {
               )}
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Name / Title</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white"
-                  placeholder="e.g. iPhone 13 Screen"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Name / Title</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white"
+                    placeholder="e.g. iPhone 13 Screen"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white"
+                    placeholder="e.g. +959..."
+                  />
+                </div>
               </div>
 
               <div>
@@ -344,6 +360,15 @@ export const BuySparepart: React.FC = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h4 className="font-bold text-slate-800 line-clamp-1">{item.name}</h4>
+                        {item.phoneNumber && (
+                          <a 
+                            href={`tel:${item.phoneNumber}`} 
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs text-indigo-600 font-medium hover:underline block mb-0.5"
+                          >
+                            {item.phoneNumber}
+                          </a>
+                        )}
                         <p className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleString()}</p>
                       </div>
                       <div className="flex gap-1">
@@ -405,8 +430,17 @@ export const BuySparepart: React.FC = () => {
             
             <div className="p-6 overflow-y-auto space-y-4 text-sm bg-slate-50">
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <div className="text-xl font-bold text-slate-800 mb-1">{viewingItem.name}</div>
-                <div className="text-xs text-slate-500 mb-4">{new Date(viewingItem.createdAt).toLocaleString()}</div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-xl font-bold text-slate-800 mb-1">{viewingItem.name}</div>
+                    {viewingItem.phoneNumber && (
+                      <a href={`tel:${viewingItem.phoneNumber}`} className="text-sm font-medium text-indigo-600 hover:underline mb-1 block">
+                        {viewingItem.phoneNumber}
+                      </a>
+                    )}
+                    <div className="text-xs text-slate-500 mb-4">{new Date(viewingItem.createdAt).toLocaleString()}</div>
+                  </div>
+                </div>
                 
                 <h4 className="font-semibold text-slate-700 mb-2 border-t border-slate-100 pt-3">Sparepart Description</h4>
                 <div className="text-slate-600 bg-slate-50 p-4 rounded-lg">

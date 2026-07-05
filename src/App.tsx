@@ -17,7 +17,7 @@ import { Ticket } from './types';
 
 export default function App() {
   const [view, setView] = useState<'welcome' | 'portal' | 'finance' | 'mobileSales' | 'accessories'>('welcome');
-  const [activePortalView, setActivePortalView] = useState('new');
+  const [activePortalView, setActivePortalView] = useState('list');
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [theme, setTheme] = useState<'original' | 'dark'>('original');
   const [user, setUser] = useState<User | null>(null);
@@ -128,7 +128,7 @@ export default function App() {
 
   const renderView = () => {
     if (view === 'welcome') {
-      return <Welcome onEnter={() => setView('portal')} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
+      return <Welcome onEnter={() => { setView('portal'); setActivePortalView('list'); }} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
     }
 
     if (view === 'finance') {

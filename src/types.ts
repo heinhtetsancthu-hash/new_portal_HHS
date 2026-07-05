@@ -60,6 +60,7 @@ export interface InstallmentSaleItem {
 export interface SparepartItem {
   id: string;
   name: string;
+  phoneNumber?: string;
   item: string;
   photo1: string;
   photo2: string;
