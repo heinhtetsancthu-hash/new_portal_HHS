@@ -90,6 +90,18 @@ export interface SparepartStockItem {
   createdAt: number;
 }
 
+export interface DailyRecordItem {
+  id: string;
+  name: string;
+  category: string;
+  date: string;
+  isCash: boolean;
+  isBanking: boolean;
+  cashAmount: number;
+  bankingAmount: number;
+  createdAt: number;
+}
+
 export interface Ticket {
   id: string;
   ticketId?: string;
@@ -113,4 +125,18 @@ export interface Ticket {
   haveStock?: boolean;
   usedSparepartId?: string;
   usedSparepartName?: string;
+}
+
+export interface TemperGlassBrand {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+export interface TemperGlassItem {
+  id: string;
+  brand: string;
+  name: string;
+  isCustomerOrder: boolean;
+  createdAt: number;
 }

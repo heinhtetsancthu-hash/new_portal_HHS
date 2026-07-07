@@ -10,13 +10,15 @@ import { MobileSales } from './components/MobileSales';
 import { BuySparepart } from './components/BuySparepart';
 import { BuyAccessories } from './components/BuyAccessories';
 import { SparepartStock } from './components/SparepartStock';
+import { DailyRecord } from './components/DailyRecord';
+import { TemperGlass } from './components/TemperGlass';
 import { GlobalNotifications } from './components/GlobalNotifications';
 import { auth } from './firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { Ticket } from './types';
 
 export default function App() {
-  const [view, setView] = useState<'welcome' | 'portal' | 'finance' | 'mobileSales' | 'accessories'>('welcome');
+  const [view, setView] = useState<'welcome' | 'portal' | 'finance' | 'mobileSales' | 'accessories' | 'dailyRecord' | 'temperGlass'>('welcome');
   const [activePortalView, setActivePortalView] = useState('list');
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [theme, setTheme] = useState<'original' | 'dark'>('original');
@@ -128,7 +130,7 @@ export default function App() {
 
   const renderView = () => {
     if (view === 'welcome') {
-      return <Welcome onEnter={() => { setView('portal'); setActivePortalView('list'); }} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
+      return <Welcome onEnter={() => { setView('portal'); setActivePortalView('list'); }} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} onDailyRecord={() => setView('dailyRecord')} onTemperGlass={() => setView('temperGlass')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
     }
 
     if (view === 'finance') {
@@ -141,6 +143,14 @@ export default function App() {
 
     if (view === 'accessories') {
       return <BuyAccessories onBack={() => setView('welcome')} />;
+    }
+
+    if (view === 'dailyRecord') {
+      return <DailyRecord onBack={() => setView('welcome')} />;
+    }
+
+    if (view === 'temperGlass') {
+      return <TemperGlass onBack={() => setView('welcome')} />;
     }
 
     return (

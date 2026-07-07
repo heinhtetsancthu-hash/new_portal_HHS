@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Wrench, DollarSign, Moon, Sun, LogOut, ShoppingCart, User, Globe, ShoppingBag } from 'lucide-react';
+import { Settings, Wrench, DollarSign, Moon, Sun, LogOut, ShoppingCart, User, Globe, ShoppingBag, Calendar, Activity } from 'lucide-react';
 import { subscribeToAccessoryOrders } from '../db';
 import { auth } from '../firebase';
 
@@ -8,13 +8,15 @@ interface WelcomeProps {
   onFinance: () => void;
   onMobileSales: () => void;
   onAccessories: () => void;
+  onDailyRecord: () => void;
+  onTemperGlass: () => void;
   theme: 'original' | 'dark';
   toggleTheme: () => void;
   onSignOut: () => void;
   user?: any;
 }
 
-export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSales, onAccessories, theme, toggleTheme, onSignOut, user }) => {
+export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSales, onAccessories, onDailyRecord, onTemperGlass, theme, toggleTheme, onSignOut, user }) => {
   const isDark = theme === 'dark';
   const [accessoryOrdersCount, setAccessoryOrdersCount] = useState(0);
 
@@ -58,7 +60,7 @@ export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSa
         <div className="bg-indigo-600 text-white p-4 rounded-full inline-flex mb-6 items-center justify-center shadow-lg shadow-indigo-600/20">
           <Wrench size={48} />
         </div>
-        <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Hein Htet San</h1>
+        <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>HHS Management System</h1>
         <h2 className={`font-semibold tracking-wider text-sm mb-4 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>REPAIR CENTER PORTAL</h2>
         
         {user && user.email && (
@@ -109,6 +111,22 @@ export const Welcome: React.FC<WelcomeProps> = ({ onEnter, onFinance, onMobileSa
                  </span>
                )}
             </div>
+          </button>
+          
+          <button 
+            onClick={onDailyRecord}
+            className={`w-full font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm ${isDark ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
+          >
+            <Calendar size={20} />
+            Daily Record
+          </button>
+          
+          <button 
+            onClick={onTemperGlass}
+            className={`w-full font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm ${isDark ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+          >
+            <Activity size={20} />
+            TemperGlass
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
-import { Ticket, Transaction, StockItem, SaleItem, InstallmentSaleItem, SparepartItem, AccessoryOrder, SparepartStockItem } from './types';
+import { Ticket, Transaction, TemperGlassBrand, TemperGlassItem, StockItem, SaleItem, InstallmentSaleItem, SparepartItem, AccessoryOrder, SparepartStockItem, DailyRecordItem } from './types';
 import { db, auth } from './firebase';
-import { doc, setDoc, getDocs, getDoc, deleteDoc, collection, writeBatch, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDocs, getDoc, deleteDoc, collection, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 enum OperationType {
   CREATE = 'create',
@@ -566,3 +566,156 @@ export const decrementSparepartStockItemCount = async (id: string, decrementBy: 
 
 
 
+
+export const saveDailyRecord = async (item: DailyRecordItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/daily_records`;
+  try {
+    await setDoc(doc(db, path, item.id), item);
+    await addNotification(`Daily record for ${item.name} saved`, 'success');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const subscribeToDailyRecords = (callback: (items: DailyRecordItem[]) => void): (() => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    return () => {};
+  }
+  
+  const path = `users/${userId}/daily_records`;
+  
+  try {
+    const unsubscribe = onSnapshot(collection(db, path), (snapshot) => {
+      const items: DailyRecordItem[] = [];
+      snapshot.forEach((doc) => {
+        items.push(doc.data() as DailyRecordItem);
+      });
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      callback(items);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    });
+    return unsubscribe;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+    return () => {};
+  }
+};
+
+export const deleteDailyRecord = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/daily_records`;
+  try {
+    await deleteDoc(doc(db, path, id));
+    await addNotification(`Daily record deleted`, 'warning');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const updateDailyRecord = async (item: DailyRecordItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/daily_records`;
+  try {
+    await setDoc(doc(db, path, item.id), item, { merge: true });
+    await addNotification(`Daily record for ${item.name} updated`, 'info');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
+export const subscribeToTemperGlassBrands = (callback: (brands: TemperGlassBrand[]) => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    callback([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, `users/${userId}/temper_glass_brands`),
+    orderBy('createdAt', 'asc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TemperGlassBrand)));
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, `users/${userId}/temper_glass_brands`);
+  });
+};
+
+export const saveTemperGlassBrand = async (brand: TemperGlassBrand): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass_brands`;
+  try {
+    await setDoc(doc(db, path, brand.id), brand);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const updateTemperGlassBrand = async (brand: TemperGlassBrand): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass_brands`;
+  try {
+    await setDoc(doc(db, path, brand.id), brand, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
+export const deleteTemperGlassBrand = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass_brands`;
+  try {
+    await deleteDoc(doc(db, path, id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
+
+export const subscribeToTemperGlassItems = (callback: (items: TemperGlassItem[]) => void) => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    callback([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, `users/${userId}/temper_glass`),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TemperGlassItem)));
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, `users/${userId}/temper_glass`);
+  });
+};
+
+export const saveTemperGlassItem = async (item: TemperGlassItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass`;
+  try {
+    await setDoc(doc(db, path, item.id), item);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+};
+
+export const updateTemperGlassItem = async (item: TemperGlassItem): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass`;
+  try {
+    await setDoc(doc(db, path, item.id), item, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
+export const deleteTemperGlassItem = async (id: string): Promise<void> => {
+  const userId = requireAuth();
+  const path = `users/${userId}/temper_glass`;
+  try {
+    await deleteDoc(doc(db, path, id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+};
