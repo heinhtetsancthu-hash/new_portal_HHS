@@ -170,82 +170,82 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="border border-[#333] bg-[#0a0a0a] rounded text-sm text-center">
+            <div className="grid grid-cols-2 gap-4 text-sm text-center">
               {/* AA */}
-              <div className="border-b border-[#333]">
-                <div className="text-green-500 py-3 border-b border-[#333]">AA</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-green-500 font-bold mb-6 text-base tracking-wider">AA</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-gray-400">{dAA.cash || ''}</div>
-                  <div className="flex-1 py-2 text-gray-400">{dAA.banking || ''}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-gray-400">{dAA.cash || ''}</div>
+                  <div className="flex-1 text-gray-400">{dAA.banking || ''}</div>
                 </div>
               </div>
 
               {/* BB */}
-              <div className="border-b border-[#333]">
-                <div className="text-green-500 py-3 border-b border-[#333]">BB</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-green-500 font-bold mb-6 text-base tracking-wider">BB</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-gray-400">{dBB.cash || ''}</div>
-                  <div className="flex-1 py-2 text-gray-400">{dBB.banking || ''}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-gray-400">{dBB.cash || ''}</div>
+                  <div className="flex-1 text-gray-400">{dBB.banking || ''}</div>
                 </div>
               </div>
 
               {/* Daily Accessories */}
-              <div className="border-b border-[#333]">
-                <div className="text-green-500 py-3 border-b border-[#333]">Daily Accessories</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-green-500 font-bold mb-6 text-base tracking-wider">Daily Accessories</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-gray-400">{dAcc.cash || ''}</div>
-                  <div className="flex-1 py-2 text-gray-400">{dAcc.banking || ''}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-gray-400">{dAcc.cash || ''}</div>
+                  <div className="flex-1 text-gray-400">{dAcc.banking || ''}</div>
                 </div>
               </div>
 
               {/* Daily Expense */}
-              <div className="border-b border-[#333]">
-                <div className="text-red-500 py-3 border-b border-[#333]">Daily Expense</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-red-500 font-bold mb-6 text-base tracking-wider">Daily Expense</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-gray-400">{dExp.cash || ''}</div>
-                  <div className="flex-1 py-2 text-gray-400">{dExp.banking || ''}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-gray-400">{dExp.cash || ''}</div>
+                  <div className="flex-1 text-gray-400">{dExp.banking || ''}</div>
                 </div>
               </div>
 
               {/* Ma Gyi */}
-              <div className="border-b border-[#333]">
-                <div className="text-blue-500 py-3 border-b border-[#333]">Ma Gyi</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-blue-500 font-bold mb-6 text-base tracking-wider">Ma Gyi</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-gray-400">{dMagyi.cash || ''}</div>
-                  <div className="flex-1 py-2 text-gray-400">{dMagyi.banking || ''}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-gray-400">{dMagyi.cash || ''}</div>
+                  <div className="flex-1 text-gray-400">{dMagyi.banking || ''}</div>
                 </div>
               </div>
 
               {/* Total */}
-              <div>
-                <div className="text-blue-500 py-3 border-b border-[#333]">Total</div>
-                <div className="flex border-b border-[#333]">
-                  <div className="flex-1 py-2 border-r border-[#333] text-white">Cash</div>
-                  <div className="flex-1 py-2 text-white">Banking</div>
+              <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                <div className="text-blue-500 font-bold mb-6 text-base tracking-wider">Total</div>
+                <div className="flex font-bold mb-6">
+                  <div className="flex-1 text-white">Cash</div>
+                  <div className="flex-1 text-white">Banking</div>
                 </div>
-                <div className="flex">
-                  <div className="flex-1 py-2 border-r border-[#333] text-blue-500">{totalCash || 0}</div>
-                  <div className="flex-1 py-2 text-blue-500">{totalBanking || 0}</div>
+                <div className="flex font-bold">
+                  <div className="flex-1 text-blue-500">{totalCash || 0}</div>
+                  <div className="flex-1 text-blue-500">{totalBanking || 0}</div>
                 </div>
               </div>
             </div>
@@ -585,8 +585,8 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col font-sans">
       <header className="bg-[#111] border-b border-[#333] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col h-auto pt-4 pb-0">
+            <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={onBack}
                 className="p-2 -ml-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#222] transition-colors"
@@ -599,7 +599,7 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
               </div>
             </div>
             
-            <div className="flex items-center gap-8 h-full">
+            <div className="flex items-center gap-8 h-12">
               <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`text-xs tracking-widest uppercase h-full px-1 border-b-2 transition-colors ${activeTab === 'dashboard' ? 'border-[#dcb755] text-[#dcb755]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
