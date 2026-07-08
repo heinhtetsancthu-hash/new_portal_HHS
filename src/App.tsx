@@ -130,7 +130,7 @@ export default function App() {
 
   const renderView = () => {
     if (view === 'welcome') {
-      return <Welcome onEnter={() => { setView('portal'); setActivePortalView('list'); }} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} onDailyRecord={() => setView('dailyRecord')} onTemperGlass={() => setView('temperGlass')} onBackup={() => { setView('portal'); setActivePortalView('backup'); }} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
+      return <Welcome onEnter={() => { setView('portal'); setActivePortalView('list'); }} onFinance={() => setView('finance')} onMobileSales={() => setView('mobileSales')} onAccessories={() => setView('accessories')} onDailyRecord={() => setView('dailyRecord')} onTemperGlass={() => setView('temperGlass')} theme={theme} toggleTheme={toggleTheme} onSignOut={handleAppSignOut} user={user} />;
     }
 
     if (view === 'finance') {
