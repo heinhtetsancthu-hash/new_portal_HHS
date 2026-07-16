@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, PackagePlus, ShoppingBag, CreditCard, Smartphone, Plus, Trash2, Check, RefreshCw, List, Eye, Edit, X, Download, Search, LayoutDashboard } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { toPng } from 'html-to-image';
 import { saveStockItem, getStockItems, deleteStockItem, saveSaleItem, getSaleItems, deleteSaleItem, saveInstallmentSaleItem, getInstallmentSaleItems, deleteInstallmentSaleItem } from '../db';
 import { StockItem, SaleItem, InstallmentSaleItem } from '../types';
@@ -15,6 +16,42 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
   const [activeSalesTab, setActiveSalesTab] = useState<'sale' | 'saleList'>('sale');
   const [activeInstallmentTab, setActiveInstallmentTab] = useState<'sale' | 'list'>('sale');
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
+
+  const exportStockToPDF = () => {
+    const doc = new jsPDF();
+    const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+    const fileName = `Handset_Stock_${currentDate}.pdf`;
+
+    doc.setFontSize(16);
+    doc.text('Stock List', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+    const tableColumn = ["Brand", "Model", "IMEI", "Storage", "Color", "Price"];
+    const tableRows: any[] = [];
+
+    stockItems.forEach(item => {
+      const rowData = [
+        item.brand,
+        item.model,
+        item.imei,
+        item.ramRom || '-',
+        item.color || '-',
+        item.price ? item.price.toLocaleString() : '-'
+      ];
+      tableRows.push(rowData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [14, 165, 233] },
+    });
+
+    doc.save(fileName);
+  };
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [installmentSaleItems, setInstallmentSaleItems] = useState<InstallmentSaleItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -636,7 +673,7 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
               <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:border-none md:shadow-none md:p-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <h2 className="text-lg font-semibold text-slate-800">Stock List</h2>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="bg-sky-50 text-sky-700 border border-sky-100 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1">
                       <span className="text-sky-500 font-normal">Value:</span> 
                       {stockItems.reduce((acc, item) => acc + (item.price || 0), 0).toLocaleString()}
@@ -645,6 +682,13 @@ export const MobileSales: React.FC<MobileSalesProps> = ({ onBack }) => {
                       <span className="text-emerald-500 font-normal">Devices:</span>
                       {stockItems.length}
                     </span>
+                    <button 
+                      onClick={exportStockToPDF}
+                      className="flex items-center gap-1 bg-slate-800 text-white hover:bg-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
+                    >
+                      <Download size={14} />
+                      Export PDF
+                    </button>
                   </div>
                 </div>
                 
