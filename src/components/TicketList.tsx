@@ -335,10 +335,11 @@ export const TicketList: React.FC<TicketListProps> = ({ onEditTicket }) => {
     
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const matchName = t.customerName.toLowerCase().includes(query);
+      const matchName = t.customerName?.toLowerCase().includes(query);
       const matchId = t.ticketId?.toLowerCase().includes(query) || t.id.toLowerCase().includes(query);
-      const matchModel = t.deviceModel.toLowerCase().includes(query);
-      if (!matchName && !matchId && !matchModel) return false;
+      const matchModel = t.deviceModel?.toLowerCase().includes(query);
+      const matchPhone = t.phoneNumber?.toLowerCase().includes(query);
+      if (!matchName && !matchId && !matchModel && !matchPhone) return false;
     }
     
     return true;
@@ -388,7 +389,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onEditTicket }) => {
           <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase">Search</label>
           <input 
             type="text" 
-            placeholder="Search Name, ID or Model..." 
+            placeholder="Search Name, ID, Model, or Phone..." 
             value={searchQuery} 
             onChange={e => setSearchQuery(e.target.value)} 
             className="w-full px-3 py-2 bg-[#F9FAFB] border border-slate-200 rounded-lg text-sm text-slate-600 focus:outline-none focus:border-indigo-500"
