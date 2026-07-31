@@ -105,6 +105,7 @@ export interface DailyRecordItem {
 export interface Ticket {
   id: string;
   ticketId?: string;
+  receiveName?: string;
   customerName: string;
   phoneNumber: string;
   deviceBrand: string;

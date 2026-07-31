@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Save, ImagePlus, X, Lock, AlertCircle } from 'lucide-react';
 import { Ticket, SparepartStockItem } from '../types';
 import { saveTicket, updateTicket, subscribeToSparepartStockItems, decrementSparepartStockItemCount } from '../db';
-import { getStoredErrorTypes, subscribeStoredErrorTypes } from './Settings';
+import { getStoredErrorTypes, subscribeStoredErrorTypes, subscribeStoredReceiveNames } from './Settings';
 
 interface NewTicketProps {
   editingTicket?: Ticket | null;
@@ -13,6 +13,7 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
+    receiveName: '',
     customerName: '',
     phoneNumber: '',
     deviceBrand: '',
@@ -27,6 +28,7 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
   });
 
   const [errorTypes, setErrorTypes] = useState<string[]>([]);
+  const [receiveNames, setReceiveNames] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [haveStock, setHaveStock] = useState(false);
@@ -55,9 +57,11 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
   useEffect(() => {
     const unsubErrorTypes = subscribeStoredErrorTypes(setErrorTypes);
     const unsubStock = subscribeToSparepartStockItems(setStockItems);
+    const unsubReceiveNames = subscribeStoredReceiveNames(setReceiveNames);
     return () => {
       unsubErrorTypes();
       unsubStock();
+      unsubReceiveNames();
     };
   }, []);
 
@@ -75,6 +79,7 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
   useEffect(() => {
     if (editingTicket) {
       setFormData({
+        receiveName: editingTicket.receiveName || '',
         customerName: editingTicket.customerName,
         phoneNumber: editingTicket.phoneNumber,
         deviceBrand: editingTicket.deviceBrand,
@@ -216,7 +221,7 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
         }, 1500);
       } else {
         setFormData({
-          customerName: '', phoneNumber: '', deviceBrand: '', deviceModel: '',
+          receiveName: '', customerName: '', phoneNumber: '', deviceBrand: '', deviceModel: '',
           imei: '', advancePayment: '', errorType: '', estimatedCost: '', screenLock: 'None', screenLockValue: '', notes: ''
         });
         setAccessories({ Charger: false, 'Memory Card': false, Battery: false, 'Sim Card': false });
@@ -557,6 +562,16 @@ export const NewTicket: React.FC<NewTicketProps> = ({ editingTicket, onSaveCompl
               ))}
             </div>
           )}
+          
+          <div className="pt-2">
+            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide">Receive Name</label>
+            <select name="receiveName" value={formData.receiveName} onChange={handleInputChange} className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm text-slate-700 appearance-none">
+              <option value="">Select Name</option>
+              {receiveNames.map((name, i) => (
+                <option key={i} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
     </div>
