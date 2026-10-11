@@ -1,4 +1,4 @@
-import { Ticket, Transaction, TemperGlassBrand, TemperGlassItem, StockItem, SaleItem, InstallmentSaleItem, SparepartItem, AccessoryOrder, SparepartStockItem, DailyRecordItem } from './types';
+import { Ticket, Transaction, TemperGlassBrand, TemperGlassItem, StockItem, SaleItem, InstallmentSaleItem, SparepartItem, AccessoryOrder, SparepartStockItem, DailyRecordItem, SavingRecord, SavingGoal } from './types';
 import { db, auth } from './firebase';
 import { doc, setDoc, getDocs, getDoc, deleteDoc, collection, writeBatch, onSnapshot, query, orderBy } from 'firebase/firestore';
 
@@ -160,6 +160,24 @@ export const getTransactions = async (): Promise<Transaction[]> => {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];
   }
+};
+
+export const subscribeToTransactions = (callback: (txs: Transaction[]) => void): (() => void) => {
+  const userId = requireAuth();
+  const path = `users/${userId}/transactions`;
+  return onSnapshot(
+    collection(db, path),
+    (snapshot) => {
+      const txs: Transaction[] = [];
+      snapshot.forEach((doc) => {
+        txs.push(doc.data() as Transaction);
+      });
+      callback(txs.sort((a, b) => b.createdAt - a.createdAt));
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, path);
+    }
+  );
 };
 
 export const deleteTransaction = async (id: string): Promise<void> => {
@@ -719,3 +737,67 @@ export const deleteTemperGlassItem = async (id: string): Promise<void> => {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 };
+
+export const DEFAULT_SAVING_GOALS: SavingGoal[] = [
+  { id: 'goal-emergency', name: 'Emergency Fund', targetAmount: 2000000, color: 'emerald', createdAt: 1 },
+  { id: 'goal-shop', name: 'Shop Reserve & Expansion', targetAmount: 5000000, color: 'blue', createdAt: 2 },
+  { id: 'goal-equipment', name: 'Tools & Equipment', targetAmount: 1500000, color: 'purple', createdAt: 3 },
+  { id: 'goal-general', name: 'General Savings', targetAmount: 3000000, color: 'amber', createdAt: 4 },
+];
+
+export const getStoredSavingRecords = async (): Promise<SavingRecord[]> => {
+  try {
+    const stored = await getSettings('finance_saving_records');
+    if (Array.isArray(stored)) return stored;
+  } catch (e) {
+    console.error('Failed to get saving records', e);
+  }
+  return [];
+};
+
+export const saveStoredSavingRecords = async (records: SavingRecord[]): Promise<void> => {
+  try {
+    await saveSettings('finance_saving_records', records);
+  } catch (e) {
+    console.error('Failed to save saving records', e);
+  }
+};
+
+export const subscribeStoredSavingRecords = (callback: (records: SavingRecord[]) => void): (() => void) => {
+  return subscribeToSettings('finance_saving_records', (stored) => {
+    if (Array.isArray(stored)) {
+      callback(stored);
+    } else {
+      callback([]);
+    }
+  });
+};
+
+export const getStoredSavingGoals = async (): Promise<SavingGoal[]> => {
+  try {
+    const stored = await getSettings('finance_saving_goals');
+    if (Array.isArray(stored) && stored.length > 0) return stored;
+  } catch (e) {
+    console.error('Failed to get saving goals', e);
+  }
+  return DEFAULT_SAVING_GOALS;
+};
+
+export const saveStoredSavingGoals = async (goals: SavingGoal[]): Promise<void> => {
+  try {
+    await saveSettings('finance_saving_goals', goals);
+  } catch (e) {
+    console.error('Failed to save saving goals', e);
+  }
+};
+
+export const subscribeStoredSavingGoals = (callback: (goals: SavingGoal[]) => void): (() => void) => {
+  return subscribeToSettings('finance_saving_goals', (stored) => {
+    if (Array.isArray(stored) && stored.length > 0) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_SAVING_GOALS);
+    }
+  });
+};
+

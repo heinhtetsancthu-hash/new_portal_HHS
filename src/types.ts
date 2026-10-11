@@ -141,3 +141,24 @@ export interface TemperGlassItem {
   isCustomerOrder: boolean;
   createdAt: number;
 }
+
+export interface SavingRecord {
+  id: string;
+  type: 'deposit' | 'withdraw';
+  amount: number;
+  category?: string;
+  goalId?: string;
+  goalName?: string;
+  accountType?: string;
+  note?: string;
+  date?: string;
+  createdAt: number;
+}
+
+export interface SavingGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  color?: string;
+  createdAt: number;
+}

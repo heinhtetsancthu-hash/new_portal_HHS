@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, DollarSign, Plus, ArrowUpRight, ArrowDownRight, Trash2, Calendar, Settings, LogOut, Menu, X, Check, Edit2, Upload, Download, Filter, Search, Eye, Package } from 'lucide-react';
-import { saveTransaction, getTransactions, deleteTransaction, updateTransaction, getSettings, saveSettings, subscribeToSettings } from '../db';
+import { ArrowLeft, DollarSign, Plus, ArrowUpRight, ArrowDownRight, Trash2, Calendar, Settings, LogOut, Menu, X, Check, Edit2, Upload, Download, Filter, Search, Eye, Package, PiggyBank } from 'lucide-react';
+import { saveTransaction, getTransactions, subscribeToTransactions, deleteTransaction, updateTransaction, getSettings, saveSettings, subscribeToSettings } from '../db';
 import { Transaction } from '../types';
+import { FinanceSaving } from './FinanceSaving';
 
 interface FinanceProps {
   onBack: () => void;
@@ -40,6 +41,7 @@ const DEFAULT_EXPENSE_CATS = [
   'အချိုရည်',
   'ကျူရှင်လခ',
   'ဝေမာလွင်',
+  'စုငွေ',
   'KO_Pay',
   'KPay',
   'WIFI',
@@ -146,7 +148,7 @@ export const setStoredSupplierCats = async (cats: string[]) => {
 };
 
 export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
-  const [activeView, setActiveView] = useState<'overview' | 'supplier' | 'settings'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'supplier' | 'saving' | 'settings'>('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleBackClick = () => {
@@ -156,6 +158,7 @@ export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
   const navItems = [
     { id: 'overview', label: 'Overview', icon: DollarSign },
     { id: 'supplier', label: 'Supplier', icon: Package },
+    { id: 'saving', label: 'Saving', icon: PiggyBank },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -230,6 +233,7 @@ export const Finance: React.FC<FinanceProps> = ({ onBack }) => {
       <main className="flex-1 lg:ml-64 w-full min-h-screen overflow-x-hidden">
         {activeView === 'overview' && <FinanceOverview />}
         {activeView === 'supplier' && <FinanceSupplier />}
+        {activeView === 'saving' && <FinanceSaving />}
         {activeView === 'settings' && <FinanceSettings />}
       </main>
     </div>
@@ -297,10 +301,14 @@ const FinanceOverview = () => {
 
   useEffect(() => {
     loadTransactions();
+    const unsubTx = subscribeToTransactions((txs) => {
+      setTransactions(txs.sort((a, b) => b.createdAt - a.createdAt));
+    });
     const unsubIncome = subscribeStoredIncomeCats(setIncomeCats);
     const unsubExpense = subscribeStoredExpenseCats(setExpenseCats);
     const unsubSupplier = subscribeStoredSupplierCats(setSupplierCats);
     return () => {
+      unsubTx();
       unsubIncome();
       unsubExpense();
       unsubSupplier();
@@ -713,8 +721,14 @@ const FinanceSupplier = () => {
 
   useEffect(() => {
     loadTransactions();
+    const unsubTx = subscribeToTransactions((txs) => {
+      setTransactions(txs.sort((a, b) => b.createdAt - a.createdAt));
+    });
     const unsub = subscribeStoredSupplierCats(setSupplierCats);
-    return () => unsub();
+    return () => {
+      unsubTx();
+      unsub();
+    };
   }, []);
 
   const supplierTransactions = transactions.filter(t => supplierCats.includes(t.category));
@@ -757,6 +771,9 @@ const FinanceSupplier = () => {
 
   const totalIncomesForSupplier = filteredIncomesForSupplier.reduce((sum, t) => sum + t.amount, 0);
   const totalSupplierExpense = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const accessorySupplierExpense = filteredTransactions
+    .filter(t => t.category.toLowerCase().includes('accessories') || (t.description && t.description.toLowerCase().includes('accessories')))
+    .reduce((sum, t) => sum + t.amount, 0);
   const remainingAmount = totalIncomesForSupplier - totalSupplierExpense;
 
   return (
@@ -842,6 +859,11 @@ const FinanceSupplier = () => {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
             <p className="text-sm font-semibold text-slate-500 mb-1">Supplier Purchases</p>
             <h3 className="text-2xl font-bold text-red-500">{totalSupplierExpense.toLocaleString()} <span className="text-sm opacity-70">MMK</span></h3>
+            {accessorySupplierExpense > 0 && (
+              <span className="text-[11px] text-rose-500 font-medium mt-1">
+                Expense Accessories: {accessorySupplierExpense.toLocaleString()} MMK
+              </span>
+            )}
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
             <p className="text-sm font-semibold text-slate-500 mb-1">Remaining Amount</p>
