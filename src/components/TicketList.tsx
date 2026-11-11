@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Eye, Edit2, Trash2, Calendar, Filter, X, ChevronDown, Check, Save, Download, FileText, Image as ImageIcon, Phone } from 'lucide-react';
+import { Eye, Edit2, Trash2, Calendar, Filter, X, ChevronDown, Check, Save, Download, FileText, Image as ImageIcon, Phone, FileSpreadsheet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
+import * as XLSX from 'xlsx';
 import { getTickets, updateTicket, deleteTicket } from '../db';
 import { Ticket, TicketStatus } from '../types';
 import { getStoredErrorTypes, subscribeStoredErrorTypes } from './Settings';
@@ -84,6 +85,77 @@ export const TicketList: React.FC<TicketListProps> = ({ onEditTicket }) => {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleExportExcel = () => {
+    if (filteredTickets.length === 0) {
+      alert('No tickets available to export.');
+      return;
+    }
+
+    const data = filteredTickets.map((t, index) => {
+      const status = t.status || 'Pending';
+      const createdDate = new Date(t.createdAt).toLocaleDateString();
+      const returnedDate = t.returnedAt ? new Date(t.returnedAt).toLocaleDateString() : '';
+      const accessoriesStr = Array.isArray(t.accessories) && t.accessories.length > 0 
+        ? t.accessories.join(', ') 
+        : '';
+      const lockStr = t.screenLock && t.screenLock !== 'None' 
+        ? `${t.screenLock}${t.screenLockValue ? ` (${t.screenLockValue})` : ''}` 
+        : (t.screenLock || 'None');
+
+      return {
+        'No.': index + 1,
+        'Ticket ID': t.ticketId || t.id,
+        'Date': createdDate,
+        'Customer Name': t.customerName || '',
+        'Phone Number': t.phoneNumber || '',
+        'Device Brand': t.deviceBrand || '',
+        'Device Model': t.deviceModel || '',
+        'IMEI': t.imei || '',
+        'Error / Issue': t.errorType || '',
+        'Status': status,
+        'Estimated Cost': t.estimatedCost || '',
+        'Advance Payment': t.advancePayment || '',
+        'Real Cost': t.realCost || '',
+        'Screen Lock': lockStr,
+        'Accessories': accessoriesStr,
+        'Received By': t.receiveName || '',
+        'Returned Date': returnedDate,
+        'Notes': t.notes || ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+
+    // Auto-fit column widths
+    const colWidths = [
+      { wch: 6 },  // No.
+      { wch: 16 }, // Ticket ID
+      { wch: 14 }, // Date
+      { wch: 22 }, // Customer Name
+      { wch: 16 }, // Phone Number
+      { wch: 15 }, // Device Brand
+      { wch: 18 }, // Device Model
+      { wch: 18 }, // IMEI
+      { wch: 22 }, // Error / Issue
+      { wch: 18 }, // Status
+      { wch: 16 }, // Estimated Cost
+      { wch: 16 }, // Advance Payment
+      { wch: 16 }, // Real Cost
+      { wch: 18 }, // Screen Lock
+      { wch: 25 }, // Accessories
+      { wch: 16 }, // Received By
+      { wch: 16 }, // Returned Date
+      { wch: 30 }, // Notes
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tickets');
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Ticket_List_${dateStr}.xlsx`);
   };
 
   const handleExportReportPDF = () => {
@@ -437,16 +509,24 @@ export const TicketList: React.FC<TicketListProps> = ({ onEditTicket }) => {
         )}
       </div>
 
-      {/* Results Count & Total */}
-      <div className="flex justify-between items-center text-sm font-medium px-1">
+      {/* Results Count, Total & Export Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-sm font-medium px-1">
         <p className="text-slate-500">Showing {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}</p>
-        <div className="flex items-center gap-3">
-          <p className="text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm inline-flex items-center gap-1.5 font-bold">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <p className="text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 shadow-sm inline-flex items-center gap-1.5 font-bold text-xs sm:text-sm">
             Total Amount: {formattedTotalAmount}
           </p>
           <button 
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg shadow-sm transition-all text-xs sm:text-sm cursor-pointer"
+            title="Export filtered tickets table to Excel (.xlsx)"
+          >
+            <FileSpreadsheet size={16} />
+            <span>Export to Excel</span>
+          </button>
+          <button 
             onClick={handleExportReportPDF}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 shadow-sm transition-colors text-xs sm:text-sm cursor-pointer"
           >
             <FileText size={16} /> Export Report
           </button>
