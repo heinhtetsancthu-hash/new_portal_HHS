@@ -644,6 +644,43 @@ export const updateDailyRecord = async (item: DailyRecordItem): Promise<void> =>
   }
 };
 
+export const DEFAULT_DAILY_RECORD_CATEGORIES: string[] = [
+  'AA',
+  'BB',
+  'Accessories',
+  'Daily Expense',
+  'MaGyi',
+  'CC'
+];
+
+export const getStoredDailyRecordCategories = async (): Promise<string[]> => {
+  try {
+    const stored = await getSettings('daily_record_categories');
+    if (Array.isArray(stored) && stored.length > 0) return stored;
+  } catch (e) {
+    console.error('Failed to get daily record categories', e);
+  }
+  return DEFAULT_DAILY_RECORD_CATEGORIES;
+};
+
+export const subscribeStoredDailyRecordCategories = (callback: (cats: string[]) => void): (() => void) => {
+  return subscribeToSettings('daily_record_categories', (stored) => {
+    if (Array.isArray(stored) && stored.length > 0) {
+      callback(stored);
+    } else {
+      callback(DEFAULT_DAILY_RECORD_CATEGORIES);
+    }
+  });
+};
+
+export const setStoredDailyRecordCategories = async (cats: string[]): Promise<void> => {
+  try {
+    await saveSettings('daily_record_categories', cats);
+  } catch (e) {
+    console.error('Failed to save daily record categories', e);
+  }
+};
+
 export const subscribeToTemperGlassBrands = (callback: (brands: TemperGlassBrand[]) => void) => {
   const userId = auth.currentUser?.uid;
   if (!userId) {

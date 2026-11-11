@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trash2, Edit2, X, Search, Filter } from 'lucide-react';
-import { saveDailyRecord, subscribeToDailyRecords, deleteDailyRecord, updateDailyRecord } from '../db';
+import { ArrowLeft, Trash2, Edit2, X, Search, Filter, Settings } from 'lucide-react';
+import { 
+  saveDailyRecord, 
+  subscribeToDailyRecords, 
+  deleteDailyRecord, 
+  updateDailyRecord,
+  DEFAULT_DAILY_RECORD_CATEGORIES,
+  subscribeStoredDailyRecordCategories
+} from '../db';
 import { DailyRecordItem } from '../types';
+import { DailyRecordSettings } from './DailyRecordSettings';
 
 interface DailyRecordProps {
   onBack: () => void;
@@ -17,6 +25,9 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
   const [wrongPassword, setWrongPassword] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: 'delete', id: string } | { type: 'edit', record: DailyRecordItem } | null>(null);
 
+  const [categories, setCategories] = useState<string[]>(DEFAULT_DAILY_RECORD_CATEGORIES);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   const [isCash, setIsCash] = useState(true);
   const [isBanking, setIsBanking] = useState(false);
 
@@ -25,16 +36,22 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [cashAmount, setCashAmount] = useState('');
   const [bankingAmount, setBankingAmount] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [records, setRecords] = useState<DailyRecordItem[]>([]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToDailyRecords((items) => {
+    const unsubscribeRecords = subscribeToDailyRecords((items) => {
       setRecords(items);
     });
-    return () => unsubscribe();
+    const unsubscribeCategories = subscribeStoredDailyRecordCategories((cats) => {
+      setCategories(cats);
+    });
+    return () => {
+      unsubscribeRecords();
+      unsubscribeCategories();
+    };
   }, []);
 
   
@@ -151,10 +168,18 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
         const dExp = getDashCategoryStats('Daily Expense');
         const dMagyi = getDashCategoryStats('MaGyi');
 
-        const totalCashIncome = dAA.cash + dBB.cash + dAcc.cash;
+        const customCategories = categories.filter(c => !['AA', 'BB', 'Accessories', 'Daily Expense', 'MaGyi'].includes(c));
+        const customCatStats = customCategories.map(cat => ({
+          name: cat,
+          ...getDashCategoryStats(cat)
+        }));
+        const totalCustomCash = customCatStats.reduce((sum, c) => sum + c.cash, 0);
+        const totalCustomBanking = customCatStats.reduce((sum, c) => sum + c.banking, 0);
+
+        const totalCashIncome = dAA.cash + dBB.cash + dAcc.cash + totalCustomCash;
         const totalCashExpense = dExp.cash;
         const totalCash = totalCashIncome - totalCashExpense;
-        const totalBanking = dAA.banking + dBB.banking + dAcc.banking;
+        const totalBanking = dAA.banking + dBB.banking + dAcc.banking + totalCustomBanking;
 
         return (
           <div className="max-w-md mx-auto">
@@ -236,6 +261,21 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
                 </div>
               </div>
 
+              {/* Custom categories like CC */}
+              {customCatStats.map((item) => (
+                <div key={item.name} className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
+                  <div className="text-[#dcb755] font-bold mb-6 text-base tracking-wider">{item.name}</div>
+                  <div className="flex font-bold mb-6">
+                    <div className="flex-1 text-white">Cash</div>
+                    <div className="flex-1 text-white">Banking</div>
+                  </div>
+                  <div className="flex font-bold">
+                    <div className="flex-1 text-gray-400">{item.cash || ''}</div>
+                    <div className="flex-1 text-gray-400">{item.banking || ''}</div>
+                  </div>
+                </div>
+              ))}
+
               {/* Total */}
               <div className="border border-[#0ea5e9] bg-[#0a0a0a] rounded py-6 px-2 flex flex-col justify-between">
                 <div className="text-blue-500 font-bold mb-6 text-base tracking-wider">Total</div>
@@ -272,17 +312,27 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-[#dcb755] tracking-widest mb-2 uppercase">Category</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-[10px] font-bold text-[#dcb755] tracking-widest uppercase">Category</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSettingsModal(true)}
+                    className="text-[10px] text-gray-400 hover:text-[#dcb755] flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Settings size={12} />
+                    <span>Manage Categories</span>
+                  </button>
+                </div>
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
                   className="w-full bg-[#1a1a1a] border border-[#333] rounded px-4 py-3 text-white focus:outline-none focus:border-[#dcb755] transition-colors appearance-none cursor-pointer"
                 >
-                  <option value="AA">AA</option>
-                  <option value="BB">BB</option>
-                  <option value="Accessories">Accessories</option>
-                  <option value="Daily Expense">Daily Expense</option>
-                  <option value="MaGyi">MaGyi</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -393,14 +443,14 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
                   <select
                     value={filterCategory}
                     onChange={(e) => setFilterCategory(e.target.value)}
-                    className="bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-8 py-2 text-white text-sm focus:outline-none focus:border-[#dcb755] appearance-none"
+                    className="bg-[#1a1a1a] border border-[#333] rounded pl-10 pr-8 py-2 text-white text-sm focus:outline-none focus:border-[#dcb755] appearance-none cursor-pointer"
                   >
                     <option value="All">All Categories</option>
-                    <option value="AA">AA</option>
-                    <option value="BB">BB</option>
-                    <option value="Accessories">Accessories</option>
-                    <option value="Daily Expense">Daily Expense</option>
-                    <option value="MaGyi">MaGyi</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <input
@@ -464,7 +514,7 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
           </div>
 
         );
-      case 'overview':
+      case 'overview': {
         const overviewRecords = records.filter(r => r.date === overviewDate);
         const getCategoryTotal = (cat: string) => {
           const catRecords = overviewRecords.filter(r => r.category === cat);
@@ -473,21 +523,53 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
           return { cash, banking, total: cash + banking, records: catRecords };
         };
 
-        const aaStats = getCategoryTotal('AA');
-        const bbStats = getCategoryTotal('BB');
-        const accStats = getCategoryTotal('Accessories');
-        const expStats = getCategoryTotal('Daily Expense');
-        const magyiStats = getCategoryTotal('MaGyi');
+        // Standard ordered category list: AA, BB, Accessories, CC, custom categories, Daily Expense, MaGyi
+        const expenseCat = categories.find(c => c.toLowerCase().includes('expense')) || 'Daily Expense';
+        const magyiCat = categories.find(c => c.toLowerCase().replace(/\s/g, '') === 'magyi') || 'MaGyi';
+        
+        const incomeCats = categories.filter(c => c !== expenseCat && c !== magyiCat);
+        const priorityOrder = ['AA', 'BB', 'Accessories', 'CC'];
+        incomeCats.sort((a, b) => {
+          const idxA = priorityOrder.indexOf(a);
+          const idxB = priorityOrder.indexOf(b);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return a.localeCompare(b);
+        });
 
-        const incomeCashTotal = aaStats.cash + bbStats.cash + accStats.cash;
-        const incomeBankingTotal = aaStats.banking + bbStats.banking + accStats.banking;
-        const closingAmount = (aaStats.total + bbStats.total + accStats.total) - expStats.total;
+        // Ensure CC is always present in overview even if not yet saved in settings
+        if (!incomeCats.includes('CC')) {
+          incomeCats.push('CC');
+        }
+
+        const displayCategories = [...incomeCats, expenseCat, magyiCat];
+
+        const categoryStatsMap = displayCategories.map(cat => ({
+          name: cat,
+          ...getCategoryTotal(cat),
+          isExpense: cat === expenseCat,
+          isMaGyi: cat === magyiCat
+        }));
+
+        const incomeStats = categoryStatsMap.filter(c => !c.isExpense && !c.isMaGyi);
+        const expenseStats = categoryStatsMap.filter(c => c.isExpense);
+        const totalExpenseAmount = expenseStats.reduce((sum, c) => sum + c.total, 0);
+
+        const incomeCashTotal = incomeStats.reduce((sum, c) => sum + c.cash, 0);
+        const incomeBankingTotal = incomeStats.reduce((sum, c) => sum + c.banking, 0);
+        const totalIncomeAmount = incomeStats.reduce((sum, c) => sum + c.total, 0);
+        const closingAmount = totalIncomeAmount - totalExpenseAmount;
+        const incomeNamesLabel = incomeStats.map(c => c.name).join(' + ');
 
         return (
-          <div className="bg-[#111] rounded-xl border border-[#333] p-6">
-            <div className="flex justify-between items-center mb-6 border-b border-[#333] pb-4">
-              <h2 className="text-sm font-bold text-[#dcb755] tracking-widest uppercase">Daily Overview Sheet</h2>
-              <div className="flex items-center gap-4">
+          <div className="bg-[#111] rounded-xl border border-[#333] p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 border-b border-[#333] pb-4">
+              <div>
+                <h2 className="text-sm font-bold text-[#dcb755] tracking-widest uppercase">Daily Overview Sheet</h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">Summary and itemized entries breakdown by category</p>
+              </div>
+              <div className="flex items-center gap-3">
                 <span className="text-[10px] text-gray-500 tracking-widest uppercase">SELECT DATE:</span>
                 <input 
                   type="date" 
@@ -498,84 +580,159 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="border border-[#333] bg-[#0a0a0a]">
-              {/* Top 5 columns row */}
-              <div className="grid grid-cols-5 border-b border-[#333]">
-                {/* Col 1: AA */}
-                <div className="p-4 border-r border-[#333]">
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Cash</span><span className="text-white">{aaStats.cash || ''}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Banking</span><span className="text-white">{aaStats.banking || ''}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-400">Total Amount</span><span className="text-[#dcb755]">{aaStats.total || ''}</span></div>
-                </div>
-                {/* Col 2: BB */}
-                <div className="p-4 border-r border-[#333]">
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Cash</span><span className="text-white">{bbStats.cash || ''}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Banking</span><span className="text-white">{bbStats.banking || ''}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-400">Total Amount</span><span className="text-[#dcb755]">{bbStats.total || ''}</span></div>
-                </div>
-                {/* Col 3: Accessories */}
-                <div className="p-4 border-r border-[#333]">
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Cash</span><span className="text-white">{accStats.cash || ''}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Banking</span><span className="text-white">{accStats.banking || ''}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-400">Total Amount</span><span className="text-[#dcb755]">{accStats.total || ''}</span></div>
-                </div>
-                {/* Col 4: Daily Expense */}
-                <div className="p-4 border-r border-[#333]">
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-red-500">Cash</span><span className="text-white">{expStats.cash || ''}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-red-500">Banking</span><span className="text-white">{expStats.banking || ''}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-red-500">Total Amount</span><span className="text-[#dcb755]">{expStats.total || ''}</span></div>
-                </div>
-                {/* Col 5: MaGyi */}
-                <div className="p-4">
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Cash</span><span className="text-white">{magyiStats.cash || ''}</span></div>
-                  <div className="flex justify-between mb-2 text-sm"><span className="text-gray-400">Banking</span><span className="text-white">{magyiStats.banking || ''}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-gray-400">Total Amount</span><span className="text-[#dcb755]">{magyiStats.total || ''}</span></div>
-                </div>
-              </div>
+            <div className="overflow-x-auto">
+              <div 
+                className="border border-[#333] bg-[#0a0a0a]"
+                style={{ minWidth: `${Math.max(displayCategories.length * 150, 780)}px` }}
+              >
+                {/* Top columns row */}
+                <div 
+                  className="grid border-b border-[#333]"
+                  style={{ gridTemplateColumns: `repeat(${displayCategories.length}, minmax(0, 1fr))` }}
+                >
+                  {categoryStatsMap.map((col, idx) => {
+                    const isLast = idx === categoryStatsMap.length - 1;
+                    const labelColor = col.isExpense 
+                      ? 'text-red-500' 
+                      : col.isMaGyi 
+                      ? 'text-blue-500' 
+                      : col.name === 'CC'
+                      ? 'text-yellow-400 font-extrabold'
+                      : 'text-green-500';
 
-              {/* Cash Total Row */}
-              <div className="border-b border-[#333] p-4 flex items-center">
-                <span className="text-gray-400 text-sm w-[40%]">Cash Total (AA +BB +Accessories)</span>
-                <span className="text-white text-sm">{incomeCashTotal || ''}</span>
-              </div>
-
-              {/* Banking Total Row */}
-              <div className="border-b border-[#333] p-4 flex items-center">
-                <span className="text-gray-400 text-sm w-[40%]">Banking Total (AA +BB +Accessories )</span>
-                <span className="text-white text-sm">{incomeBankingTotal || ''}</span>
-              </div>
-
-              {/* Closing Amount Row */}
-              <div className="border-b border-[#333] p-4 flex items-center">
-                <span className="text-gray-400 text-sm w-[40%]">Closing Amount ( AA + BB + Accessories ) - Daily Expense</span>
-                <span className="text-[#dcb755] font-bold text-sm">{closingAmount || ''}</span>
-              </div>
-
-              {/* Header Row for Items */}
-              <div className="grid grid-cols-5 border-b border-[#333] text-center text-sm py-4">
-                <div className="border-r border-[#333] text-green-500">AA</div>
-                <div className="border-r border-[#333] text-green-500">BB</div>
-                <div className="border-r border-[#333] text-green-500">Accessories</div>
-                <div className="border-r border-[#333] text-red-500">Daily Expense</div>
-                <div className="text-blue-500">MaGyi</div>
-              </div>
-
-              {/* Items Rows */}
-              <div className="flex text-sm">
-                {[aaStats, bbStats, accStats, expStats, magyiStats].map((stat, idx) => (
-                  <div key={idx} className={`flex-1 ${idx < 4 ? 'border-r border-[#333]' : ''} p-4 min-h-[300px]`}>
-                    {stat.records.map(r => (
-                      <div key={r.id} className="flex justify-between mb-3 items-center">
-                        <span className="text-gray-400 text-xs truncate pr-2" title={r.name}>{r.name}</span>
-                        <span className="text-white text-xs whitespace-nowrap">{r.cashAmount + r.bankingAmount}</span>
+                    return (
+                      <div key={col.name} className={`p-4 ${!isLast ? 'border-r border-[#333]' : ''}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-sm font-bold tracking-wider ${labelColor}`}>
+                            {col.name}
+                          </span>
+                          {col.records.length > 0 && (
+                            <span className="text-[10px] text-gray-500">
+                              {col.records.length} item{col.records.length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between mb-1.5 text-xs">
+                          <span className={col.isExpense ? 'text-red-400' : 'text-gray-400'}>Cash</span>
+                          <span className="text-white font-medium">{col.cash ? col.cash.toLocaleString() : ''}</span>
+                        </div>
+                        <div className="flex justify-between mb-1.5 text-xs">
+                          <span className={col.isExpense ? 'text-red-400' : 'text-gray-400'}>Banking</span>
+                          <span className="text-white font-medium">{col.banking ? col.banking.toLocaleString() : ''}</span>
+                        </div>
+                        <div className="flex justify-between text-xs pt-1.5 border-t border-[#222]">
+                          <span className={col.isExpense ? 'text-red-400' : 'text-gray-400 font-bold'}>Total</span>
+                          <span className="text-[#dcb755] font-bold">{col.total ? col.total.toLocaleString() : ''}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
+
+                {/* Cash Total Row */}
+                <div className="border-b border-[#333] p-4 flex items-center justify-between">
+                  <span className="text-gray-400 text-sm">
+                    Cash Total ({incomeNamesLabel})
+                  </span>
+                  <span className="text-white text-sm font-semibold">
+                    {incomeCashTotal ? incomeCashTotal.toLocaleString() : '0'} MMK
+                  </span>
+                </div>
+
+                {/* Banking Total Row */}
+                <div className="border-b border-[#333] p-4 flex items-center justify-between">
+                  <span className="text-gray-400 text-sm">
+                    Banking Total ({incomeNamesLabel})
+                  </span>
+                  <span className="text-white text-sm font-semibold">
+                    {incomeBankingTotal ? incomeBankingTotal.toLocaleString() : '0'} MMK
+                  </span>
+                </div>
+
+                {/* Closing Amount Row */}
+                <div className="border-b border-[#333] p-4 flex items-center justify-between bg-[#141414]">
+                  <span className="text-gray-300 text-sm font-medium">
+                    Closing Amount ( {incomeNamesLabel} ) - Daily Expense
+                  </span>
+                  <span className="text-[#dcb755] font-bold text-base">
+                    {closingAmount ? closingAmount.toLocaleString() : '0'} MMK
+                  </span>
+                </div>
+
+                {/* Header Row for Items */}
+                <div 
+                  className="grid border-b border-[#333] text-center text-xs py-3 font-bold tracking-wider"
+                  style={{ gridTemplateColumns: `repeat(${displayCategories.length}, minmax(0, 1fr))` }}
+                >
+                  {categoryStatsMap.map((col, idx) => {
+                    const isLast = idx === categoryStatsMap.length - 1;
+                    const colorClass = col.isExpense 
+                      ? 'text-red-500' 
+                      : col.isMaGyi 
+                      ? 'text-blue-500' 
+                      : col.name === 'CC'
+                      ? 'text-yellow-400 font-extrabold'
+                      : 'text-green-500';
+
+                    return (
+                      <div 
+                        key={col.name} 
+                        className={`${!isLast ? 'border-r border-[#333]' : ''} ${colorClass}`}
+                      >
+                        {col.name}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Items Detail Rows */}
+                <div 
+                  className="grid text-xs"
+                  style={{ gridTemplateColumns: `repeat(${displayCategories.length}, minmax(0, 1fr))` }}
+                >
+                  {categoryStatsMap.map((col, idx) => {
+                    const isLast = idx === categoryStatsMap.length - 1;
+                    return (
+                      <div 
+                        key={col.name} 
+                        className={`${!isLast ? 'border-r border-[#333]' : ''} p-3.5 min-h-[300px] bg-[#0a0a0a]`}
+                      >
+                        {col.records.length === 0 ? (
+                          <div className="text-gray-600 text-xs text-center py-8 italic">No entries</div>
+                        ) : (
+                          col.records.map((r) => {
+                            const itemTotal = (r.cashAmount || 0) + (r.bankingAmount || 0);
+                            return (
+                              <div 
+                                key={r.id} 
+                                className="flex justify-between mb-2.5 items-center hover:bg-[#161616] p-1.5 rounded transition-colors group"
+                              >
+                                <div className="truncate pr-2">
+                                  <span className="text-gray-300 font-medium block truncate" title={r.name}>
+                                    {r.name}
+                                  </span>
+                                  {(r.isCash && r.isBanking) && (
+                                    <span className="text-[10px] text-gray-500 block">
+                                      Cash: {r.cashAmount.toLocaleString()} | Bank: {r.bankingAmount.toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-white font-bold whitespace-nowrap text-xs">
+                                  {itemTotal.toLocaleString()}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         );
+      }
       default:
         return null;
     }
@@ -586,17 +743,30 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
       <header className="bg-[#111] border-b border-[#333] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col h-auto pt-4 pb-0">
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={onBack}
-                className="p-2 -ml-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#222] transition-colors"
-              >
-                <ArrowLeft size={24} />
-              </button>
-              <div className="flex flex-col">
-                <h1 className="text-2xl font-serif text-[#dcb755] tracking-widest leading-none mb-1">DAILYRECORD</h1>
-                <span className="text-[10px] tracking-[0.2em] text-gray-500">HHS MANAGEMENT SYSTEM</span>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={onBack}
+                  className="p-2 -ml-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#222] transition-colors cursor-pointer"
+                  title="Back"
+                >
+                  <ArrowLeft size={24} />
+                </button>
+                <div className="flex flex-col">
+                  <h1 className="text-2xl font-serif text-[#dcb755] tracking-widest leading-none mb-1">DAILYRECORD</h1>
+                  <span className="text-[10px] tracking-[0.2em] text-gray-500">HHS MANAGEMENT SYSTEM</span>
+                </div>
               </div>
+
+              {/* Settings Button */}
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1a1a1a] border border-[#333] hover:border-[#dcb755] text-gray-300 hover:text-[#dcb755] text-xs font-bold tracking-wider uppercase transition-all shadow-sm cursor-pointer"
+                title="Daily Record Settings (Manage Categories)"
+              >
+                <Settings size={15} className="text-[#dcb755]" />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
             </div>
             
             <div className="flex items-center gap-8 h-12">
@@ -677,6 +847,13 @@ export const DailyRecord: React.FC<DailyRecordProps> = ({ onBack }) => {
           </div>
         </div>
       )}
+
+      {/* Daily Record Settings Modal */}
+      <DailyRecordSettings
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onCategoriesChange={(newCats) => setCategories(newCats)}
+      />
     </div>
   );
 };

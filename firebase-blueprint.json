@@ -38,6 +38,14 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "type", "amount", "category", "description", "createdAt"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "User configuration settings",
+      "type": "object",
+      "properties": {
+        "value": { "type": "object" }
+      }
     }
   },
   "firestore": {
@@ -48,6 +56,10 @@
     "users/{userId}/transactions/{transactionId}": {
       "schema": { "$ref": "#/entities/Transaction" },
       "description": "Transactions for a specific user"
+    },
+    "users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/Setting" },
+      "description": "User specific app configuration and categories"
     }
   }
 }
